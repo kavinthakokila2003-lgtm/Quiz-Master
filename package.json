@@ -1,9 +1,8 @@
 {
-  "name": "quizly-tournament",
+  "name": "quiz-master-cloudflare",
   "version": "1.0.0",
   "private": true,
-  "description": "Shared quiz tournament website with SQLite or Firebase Firestore storage",
-  "dependencies": { "firebase-admin": "^13.0.0" },
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=22.13" }
+  "description": "Quiz tournament on Cloudflare Workers and D1",
+  "scripts": { "deploy": "wrangler deploy" },
+  "devDependencies": { "wrangler": "^4.0.0" }
 }
