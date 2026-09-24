@@ -10,7 +10,7 @@ This update works with the existing Cloudflare Worker and D1 database. It keeps 
 - Add questions in the admin page or import a CSV with columns: `round,question,option_a,option_b,option_c,option_d,answer,points`.
 - Round 1 needs no round password. Starting each later round generates a different password for every team; only the admin page shows those passwords.
 - Participants see their team logo and waiting area, and answers lock on submission or round timeout.
-- Audience page (`/audience.html`) shows the live leaderboard and the question the admin projects. It reveals correct answers and the full question list when every team has completed every round.
+- Audience page (`/audience`) shows the live leaderboard and the question the admin projects. It reveals correct answers and the full question list when every team has completed every round.
 - Speed is an admin-only tie-break field and is not added to question points.
 
 ## Replace the site files
@@ -21,6 +21,6 @@ If the deployment does not start automatically, open the Cloudflare Worker, choo
 
 ## Open the pages
 
-- Admin: `/admin.html`
-- Participants: `/participant.html`
-- Audience projector: `/audience.html`
+- Admin: `/admin`
+- Participants: `/participant`
+- Audience projector: `/audience`

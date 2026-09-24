@@ -75,6 +75,6 @@ async function handleApi(req,env,url){
 }
 
 export default { async fetch(request,env){
- try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);if(!['/','/index.html','/admin.html','/participant.html','/audience.html'].includes(url.pathname))return new Response('Not found',{status:404});return await env.ASSETS.fetch(request)}
+ try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);if(!['/','/index.html','/admin','/admin.html','/participant','/participant.html','/audience','/audience.html'].includes(url.pathname))return new Response('Not found',{status:404});return await env.ASSETS.fetch(request)}
  catch(e){console.error(e);return fail(e.status||500,e.status?e.message:'Server error')}
 }};
