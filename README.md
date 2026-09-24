@@ -1,18 +1,26 @@
-# Quiz Master — Cloudflare setup
+# QUIZ MASTER — Cloudflare update package
 
-This version runs the pages and private API on Cloudflare Workers, and saves shared data in Cloudflare D1. It deploys from GitHub through the Cloudflare dashboard; no software installation is needed on your computer.
+This update works with the existing Cloudflare Worker and D1 database. It keeps the database binding and ID already configured for your project. Do not run `schema.sql` again when updating the existing site.
 
-## Setup
+## Included changes
 
-1. Open the new database's **Console** or **Query** tab. Copy all the text in `schema.sql` into the SQL box and run it.
-2. In GitHub, replace the current repository files with the files in this folder. Keep the four HTML files at the repository root. Do not upload passwords. This copy of `wrangler.jsonc` is already filled with the Database ID you supplied.
-3. In Cloudflare, go to **Workers & Pages → Create application → Import a repository**. Connect GitHub and choose `Quiz-Master`.
-4. Use Worker name `quiz-master`. Set the production deploy command to `npx wrangler deploy`, then deploy. The Wrangler config contains the static page and D1 bindings.
-5. In the Worker **Settings → Variables and Secrets**, add secret `ADMIN_PASSWORD` with a private password of at least 12 characters. Save and redeploy.
-6. Open the Worker URL. Use `/admin.html` for the admin, `/participant.html` for teams, and `/audience.html` for the audience display.
+- Admin tabs for overview, teams, questions, round controls, audience projector, and settings.
+- Add teams manually or by CSV. Each team receives a unique login password and an automatically generated logo.
+- Set each round's duration and default points; edit points on individual questions.
+- Add questions in the admin page or import a CSV with columns: `round,question,option_a,option_b,option_c,option_d,answer,points`.
+- Round 1 needs no round password. Starting each later round generates a different password for every team; only the admin page shows those passwords.
+- Participants see their team logo and waiting area, and answers lock on submission or round timeout.
+- Audience page (`/audience.html`) shows the live leaderboard and the question the admin projects. It reveals correct answers and the full question list when every team has completed every round.
+- Speed is an admin-only tie-break field and is not added to question points.
 
-Cloudflare advertises a free Workers plan without requiring a credit card. Workers Free includes up to 100,000 requests/day. D1 Free includes 5 million rows read/day, 100,000 rows written/day, and 5 GB total storage; queries stop for the day if the free daily limit is reached. See [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/), [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), and [GitHub deployment](https://developers.cloudflare.com/workers/ci-cd/builds/).
+## Replace the site files
 
-## Important prototype note
+Upload and commit the updated files to the same GitHub repository connected to Cloudflare: `worker.js`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, and `app.js`). The Worker now serves only the `public` folder, which avoids accidentally publishing project files or installed packages. Keep the database ID in `wrangler.jsonc` unchanged. Cloudflare should start a deployment after the GitHub commit.
 
-This project has the tournament-management prototype screens and shared backend flows. The participant demonstration currently uses a sample question flow; complete and review all question-entry and round controls before running a live tournament.
+If the deployment does not start automatically, open the Cloudflare Worker, choose **Deployments**, and retry the latest build. Your existing `ADMIN_PASSWORD` secret is managed in Cloudflare and is not in this package.
+
+## Open the pages
+
+- Admin: `/admin.html`
+- Participants: `/participant.html`
+- Audience projector: `/audience.html`
