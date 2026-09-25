@@ -5,6 +5,7 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 ## Included changes
 
 - Team login codes stay unique from round passwords; new teams also receive distinct generated logos.
+- Generated team emblems use an expanded icon and color set with varied badge shapes; the admin UI uses an indigo/teal palette and subtle interaction animations.
 - Teams enter a waiting lobby and mark themselves ready for each round. The audience question is hidden until every active team is ready.
 - Round 1 has no password. For later rounds, the admin can keep passwords on, turn them off for everyone, or grant direct access to selected teams.
 - Admins can set the tournament to 1–20 rounds and edit each round name. Removing a round is blocked if it is active or has submitted answers; its questions are removed after confirmation.
