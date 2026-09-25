@@ -1,23 +1,25 @@
 # QUIZ MASTER — Cloudflare update package
 
-This update works with the existing Cloudflare Worker and D1 database. It keeps the database binding and ID already configured for your project. Do not run `schema.sql` again when updating the existing site.
+This update uses your current Cloudflare Worker and D1 database. It does not add a paid storage service or require a new database. Existing team, round and question data stays in the current database.
 
 ## Included changes
 
-- Admin tabs for overview, teams, questions, round controls, audience projector, and settings.
-- Add teams manually or by CSV. Each team receives a unique login password and an automatically generated logo.
-- Set each round's duration and default points; edit points on individual questions.
-- Add questions in the admin page or import a CSV with columns: `round,question,option_a,option_b,option_c,option_d,answer,points`.
-- Round 1 needs no round password. Starting each later round generates a different password for every team; only the admin page shows those passwords.
-- Participants see their team logo and waiting area, and answers lock on submission or round timeout.
-- Audience page (`/audience`) shows the live leaderboard and the question the admin projects. It reveals correct answers and the full question list when every team has completed every round.
-- Speed is an admin-only tie-break field and is not added to question points.
+- Team login codes stay unique from round passwords; new teams also receive distinct generated logos.
+- Teams enter a waiting lobby and mark themselves ready for each round. The audience question is hidden until every active team is ready.
+- Round 1 has no password. For later rounds, the admin can keep passwords on, turn them off for everyone, or grant direct access to selected teams.
+- Admin can create or CSV-import multiple-choice and typed-answer questions, add images/videos, and set points and round times.
+- Small image/video uploads (up to 1.8 MB each) are saved in D1. Larger files can be linked using a public image/video URL or YouTube link. The media table is created automatically on first upload; no schema re-run is needed.
+- Answers lock on submit. Teams see correct/incorrect feedback after each completed round, and correct answers after all rounds are finished.
+- Admin can download the answers CSV, which opens in Excel and includes answers, scores, and response times.
+- The audience page updates the score-sorted leaderboard live and animates rank rows. It shows projected questions only after all teams are ready.
 
-## Replace the site files
+## Update the existing GitHub repository
 
-Upload and commit the updated files to the same GitHub repository connected to Cloudflare: `worker.js`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, and `app.js`). The Worker now serves only the `public` folder, which avoids accidentally publishing project files or installed packages. Keep the database ID in `wrangler.jsonc` unchanged. Cloudflare should start a deployment after the GitHub commit.
+Upload and commit the updated `worker.js`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, and `app.js`) to the same repository connected to Cloudflare. Keep the D1 database ID in `wrangler.jsonc` unchanged. Cloudflare should deploy after the GitHub commit.
 
-If the deployment does not start automatically, open the Cloudflare Worker, choose **Deployments**, and retry the latest build. Your existing `ADMIN_PASSWORD` secret is managed in Cloudflare and is not in this package.
+Do not run the database schema again. The media table is created automatically when you upload the first file. Your existing `ADMIN_PASSWORD` secret remains managed in Cloudflare and is not included here.
+
+If a deployment does not start automatically, open the Cloudflare Worker, choose **Deployments**, and retry the latest build.
 
 ## Open the pages
 
