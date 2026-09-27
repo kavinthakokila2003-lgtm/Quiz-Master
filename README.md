@@ -45,3 +45,11 @@ If a deployment does not start automatically, open the Cloudflare Worker, choose
 - Admin: `/admin`
 - Participants: `/participant`
 - Audience projector: `/audience`
+Deployment refresh.
+
+
+
+
+
+
+
