@@ -56,9 +56,64 @@
       .anticheat-icon{background:linear-gradient(145deg,#fff0f1,#ffe6e9)!important;color:#bc3d51!important}
       .anticheat-count{display:inline-block;margin-top:10px;padding:6px 11px;border-radius:20px;background:#fff1f2;color:#b5384d;font-size:11px;font-weight:800}
 
+      /* ---------- Advanced visual pass ---------- */
+
+      /* Gradient wordmark for extra polish on every header */
+      .brand b{background:linear-gradient(120deg,#7161f2,#2b9c86);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+      /* Slow-moving aurora backdrop behind every sign-in / waiting screen */
+      .team-login{background:
+        radial-gradient(circle at 20% 20%,#c9beff55,transparent 45%),
+        radial-gradient(circle at 82% 75%,#9fe6cf55,transparent 42%),
+        radial-gradient(ellipse at 53% 30%,#efecff 0%,#f5f6f8 52%);
+        background-size:180% 180%,180% 180%,100% 100%;
+        animation:auroraDrift 16s ease-in-out infinite alternate}
+      @keyframes auroraDrift{from{background-position:0% 0%,100% 100%,0 0}to{background-position:30% 40%,60% 50%,0 0}}
+
+      /* Subtle shimmer across the admin hero banner */
+      .hero{background-size:220% 220%!important;animation:heroShimmer 9s ease infinite}
+      @keyframes heroShimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+      /* Staggered entrance for the main content blocks — reads as a "live" refresh */
+      .stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form{
+        animation:qmRise .4s cubic-bezier(.2,.75,.2,1) both;
+      }
+      .stats>.stat:nth-child(1),.round-cards>.round-card:nth-child(1){animation-delay:0ms}
+      .stats>.stat:nth-child(2),.round-cards>.round-card:nth-child(2){animation-delay:60ms}
+      .stats>.stat:nth-child(3),.round-cards>.round-card:nth-child(3){animation-delay:120ms}
+      .stats>.stat:nth-child(4),.round-cards>.round-card:nth-child(4){animation-delay:180ms}
+      .round-cards>.round-card:nth-child(5){animation-delay:240ms}
+      .round-cards>.round-card:nth-child(6){animation-delay:300ms}
+      .round-cards>.round-card:nth-child(n+7){animation-delay:340ms}
+      @keyframes qmRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+      /* Podium glow for the top three leaderboard rows, on admin and projector alike */
+      .leader-row:nth-child(1){background:linear-gradient(90deg,#fff7e0,transparent)}
+      .leader-row:nth-child(1) .rank{color:#b8860b;font-size:15px;animation:podiumPulse 2.4s ease-in-out infinite}
+      .leader-row:nth-child(2){background:linear-gradient(90deg,#f2f3f7,transparent)}
+      .leader-row:nth-child(2) .rank{color:#7a7f92}
+      .leader-row:nth-child(3){background:linear-gradient(90deg,#fdece1,transparent)}
+      .leader-row:nth-child(3) .rank{color:#a6602c}
+      .audience-board .leader-row:nth-child(1){background:linear-gradient(90deg,#3a331f,transparent)}
+      .audience-board .leader-row:nth-child(2){background:linear-gradient(90deg,#2c2e3d,transparent)}
+      .audience-board .leader-row:nth-child(3){background:linear-gradient(90deg,#332720,transparent)}
+      @keyframes podiumPulse{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 10px #e8b93d99}}
+
+      /* Light shine sweep across primary buttons on hover — cheap, GPU-only */
+      .btn{position:relative;overflow:hidden}
+      .btn:before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
+      .btn:hover:before{transform:translateX(120%)}
+
+      /* Sidebar nav icon: a touch more life on hover/active */
+      .sidebar .nav:hover .ico{transform:translateY(-1px) rotate(-4deg)}
+      .sidebar .nav.active .ico{animation:navPop .3s ease both}
+      @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
+
       @media(prefers-reduced-motion:reduce){
         .enhance-overlay,.enhance-modal{transition:none!important}
         .host-banner,.host-welcome,.projector-host{animation:none!important}
+        .team-login,.hero,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
+        .leader-row:nth-child(1) .rank,.sidebar .nav.active .ico,.btn:before{animation:none!important;transition:none!important}
       }
     `;
     document.head.append(style);
@@ -153,4 +208,40 @@
     });
   }
   armAntiCheat();
+
+  // Animate admin stat numbers counting up whenever their value actually changes
+  // (skipped entirely under reduced motion; a no-op the rest of the time it runs
+  // since most polls don't change the numbers).
+  const lastStatValues = new Map();
+  function animateStatCounters() {
+    if (role !== 'admin' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.stat').forEach((card) => {
+      const label = card.querySelector('.stat-label')?.textContent || '';
+      const valueEl = card.querySelector('.stat-value');
+      if (!valueEl) return;
+      const raw = valueEl.textContent;
+      const match = raw.match(/\d+/);
+      if (!match) return;
+      const target = Number(match[0]);
+      const prev = lastStatValues.has(label) ? lastStatValues.get(label) : target;
+      lastStatValues.set(label, target);
+      if (prev === target) return;
+      const prefix = raw.slice(0, match.index), suffix = raw.slice(match.index + match[0].length);
+      const duration = 500, startTime = performance.now();
+      (function step(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        valueEl.textContent = `${prefix}${Math.round(prev + (target - prev) * eased)}${suffix}`;
+        if (t < 1) requestAnimationFrame(step); else valueEl.textContent = raw;
+      })(startTime);
+    });
+  }
+  const baseRenderForPolish = window.render;
+  if (typeof baseRenderForPolish === 'function') {
+    window.render = function () {
+      baseRenderForPolish();
+      addPolishStyles();
+      animateStatCounters();
+    };
+  }
 })();
