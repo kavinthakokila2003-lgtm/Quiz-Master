@@ -180,25 +180,30 @@
   // during a live round, counts it, and — when they come back — blocks the screen
   // with a clear "return to the quiz" prompt instead of a passive toast.
   let tabSwitchCount = 0, wentAwayAt = 0;
-  function inLiveRound() { return role === 'participant' && S && S.phase === 'play'; }
+  function inLiveRound() { return role === 'participant' && S && S.phase === 'play' && (window.qmFocusProtectionActive ? window.qmFocusProtectionActive() : activeRound?.focusRequired !== false && !S.team?.focusExempt); }
   function armAntiCheat() {
     if (window.__qmAntiCheatBound) return;
     window.__qmAntiCheatBound = true;
     document.addEventListener('visibilitychange', () => {
       if (!inLiveRound()) return;
-      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); }
+      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); reportFocusEvent('tab-hidden'); }
       else if (wentAwayAt) { wentAwayAt = 0; showReturnPrompt(); }
     });
     document.addEventListener('fullscreenchange', () => {
-      if (inLiveRound() && !document.fullscreenElement) showReturnPrompt();
+      if (inLiveRound() && !document.fullscreenElement) { reportFocusEvent('fullscreen-exit'); showReturnPrompt(); }
     });
+  }
+  function reportFocusEvent(event) {
+    const token = window.TEAM_TOKEN || (typeof TEAM_TOKEN !== 'undefined' ? TEAM_TOKEN : '');
+    if (!token) return;
+    fetch('/api/team/focus-event', { method:'POST', headers:{'content-type':'application/json',authorization:`Bearer ${token}`}, body:JSON.stringify({event}) }).catch(()=>{});
   }
   function showReturnPrompt() {
     if (document.getElementById('anticheatPrompt')) return;
     const modal = document.createElement('div');
     modal.className = 'enhance-overlay';
     modal.id = 'anticheatPrompt';
-    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Stay on the quiz screen</h2><p>Leaving this tab or exiting fullscreen during a live round is recorded. Your timer keeps running while you're away, so return quickly.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
+    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Return to the quiz</h2><p>Your host can see this focus alert. The quiz timer continues while you are away. Websites cannot block other apps, so please follow your host’s rules.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
     document.body.append(modal);
     requestAnimationFrame(() => modal.classList.add('visible'));
     modal.querySelector('[data-role="back"]').addEventListener('click', async () => {

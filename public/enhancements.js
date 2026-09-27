@@ -69,7 +69,7 @@
       try {
         const d = await api('/api/team/state'), previous = activeRound?.participantLocked, r = (d.state.rounds || []).find(x => Number(x.n) === Number(activeRound?.n));
         S = Object.assign(S, d.state, { team:d.team, answers:d.answers, revealAnswers:d.revealAnswers, phase:'play', role:'participant' });
-        if (!r?.active) { activeRound = null; activeQuestionSet = []; S.phase = 'waiting'; render(); startPolling(); return; }
+        if (!r?.active) { activeRound = null; activeQuestionSet = []; S.phase = 'waiting'; if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{}); render(); startPolling(); return; }
         if (activeRound) { activeRound.deadlineAt = r.deadlineAt; activeRound.participantLocked = !!r.participantLocked; }
         if (previous !== !!r.participantLocked) render();
       } catch {}
@@ -96,7 +96,7 @@
     autoSubmissionScheduled = true;
     const closeBeforeDeadline = setInterval(() => {
       const remain = activeRound?.deadlineAt ? Math.ceil((activeRound.deadlineAt - Date.now()) / 1000) : 0;
-      if (remain <= 1 || S.phase !== 'play') { clearInterval(closeBeforeDeadline); autoSubmissionScheduled = false; if (S.phase === 'play') baseSubmitRound(true); }
+      if (remain <= 1 || S.phase !== 'play') { clearInterval(closeBeforeDeadline); autoSubmissionScheduled = false; if (S.phase === 'play') { const result=baseSubmitRound(true); Promise.resolve(result).finally(()=>{if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});}); } }
     }, 80);
   };
 
@@ -118,6 +118,8 @@
     const lines=(S.teams||[]).map(t=>({t,p:S.passwords?.[`${r.n}-${t.code}`],direct:!!S.roundAccess?.[`${r.n}-${t.code}`]}));
     const ready=(S.readyByRound?.[String(r.n)]||[]).filter(code=>S.teams.some(t=>t.code===code)).length;
     const allDirect=!!S.teams.length&&S.teams.every(t=>S.roundAccess?.[`${r.n}-${t.code}`]);
+    S.focusExemptions=S.focusExemptions||{};S.focusEvents=S.focusEvents||[];
+    const focusEvents=S.focusEvents.filter(e=>Number(e.round)===Number(r.n));
     return `<article class="card round-card round-card-modern ${r.active?'round-is-live':''}"><div class="round-top"><div class="round-title"><span class="round-n">${r.n}</span><div><strong>${esc(r.name)}</strong><small>${qcount} questions · ${roundMinutes(r.time)} minutes · ${ready}/${S.teams.length} ready</small></div></div><span class="badge ${r.active?'live':''}">${esc(r.status||'Locked')}</span></div><div class="form-grid round-fields"><div class="field"><label>Round name</label><input value="${esc(r.name)}" onchange="setRound(${r.n},'name',this.value)"></div><div class="field"><label>Time limit (minutes)</label><input type="number" min="1" max="240" value="${roundMinutes(r.time)}" onchange="setRound(${r.n},'time',this.value)"></div><div class="field"><label>Default points</label><input type="number" min="0" value="${Number(r.points??10)}" onchange="setRound(${r.n},'points',this.value)"></div></div>${r.n>1?`<label class="access-toggle"><input type="checkbox" ${r.passwordRequired===false?'':'checked'} onchange="togglePasswordMode(${r.n},this.checked)"> Require team passwords for this round</label><div class="row-actions">${btn(allDirect?'Require passwords from all teams':'Grant direct access to all teams',`toggleAllTeamAccess(${r.n})`,'tiny light')}</div>`:''}<div class="round-access-control"><span class="access-state ${r.active?(r.participantLocked?'locked':'unlocked'):''}">${r.active?(r.participantLocked?'🔒 Participant screens locked':'● Participant screens unlocked'):'Participant access opens when this round starts'}</span><div class="row-actions">${r.active?btn(r.participantLocked?'🔓 Unlock participant screens':'🔒 Lock participant screens',`toggleParticipantLock(${r.n})`,r.participantLocked?'tiny unlock-action':'tiny lock-action'):r.status==='Completed'?'<span class="sub">Round complete · Waiting for admin</span>':r.n===1?btn('▶ Start Round 1',`startRound(${r.n})`,'tiny'):btn('▶ Start round',`openRoundForAll(${r.n})`,'tiny')}${r.n>1?btn('↓ Password sheet',`downloadRoundPasswords(${r.n})`,'tiny light'):''}</div></div>${r.n>1?`<details class="password-list"><summary>Team access · grant individually or review passwords</summary>${lines.map(({t,p,direct})=>`<div>${logo(t,25)}<strong>${esc(t.name)}</strong><code>${direct||r.passwordRequired===false?'Direct access':esc(p||'Password generated when round starts')}</code><button class="small-link" onclick="toggleTeamAccess(${r.n},${jsarg(t.code)})">${direct?'Require password':'Grant direct access'}</button></div>`).join('')}</details>`:''}</article>`;
   };
 
@@ -174,8 +176,22 @@
       <div class="round-redesign-fields"><div class="field"><label for="roundName${r.n}">ROUND NAME</label><input id="roundName${r.n}" value="${esc(r.name)}" onchange="setRound(${r.n},'name',this.value)"></div><div class="field"><label for="roundTime${r.n}">TIME LIMIT · MINUTES</label><input id="roundTime${r.n}" type="number" min="1" max="240" value="${roundMinutes(r.time)}" onchange="setRound(${r.n},'time',this.value)"></div><div class="field"><label for="roundPoints${r.n}">DEFAULT POINTS</label><input id="roundPoints${r.n}" type="number" min="0" value="${Number(r.points??10)}" onchange="setRound(${r.n},'points',this.value)"></div></div>
       ${r.n>1&&r.status!=='Completed'?`<section class="round-password-control"><div class="password-control-copy"><strong>Round entry</strong><small>Choose how teams enter this round.</small></div><label class="access-toggle redesigned-access-toggle"><input type="checkbox" ${r.passwordRequired===false?'':'checked'} onchange="togglePasswordMode(${r.n},this.checked)"><span>Require team passwords</span></label><button class="btn light tiny" onclick="toggleAllTeamAccess(${r.n})">${allDirect?'Require passwords':'Grant direct access to all teams'}</button></section>`:''}
       <section class="round-participant-control"><div class="participant-control-copy"><span class="eyebrow">PARTICIPANT ACCESS</span><strong class="${r.active?(r.participantLocked?'access-state locked':'access-state unlocked'):''}">${accessText}</strong><small>${r.active&&r.participantLocked?'Unlock to begin or resume the round timer.':r.active?'The round timer is running for participating teams.':r.status==='Completed'?'Scores are recorded. The audience sees the leaderboard.':'Start the round when your teams are ready.'}</small></div><div class="round-primary-action">${action}${r.n>1&&teams.some(x=>x.p)?btn('↓ Password sheet',`downloadRoundPasswords(${r.n})`,'tiny light'):''}</div></section>
+      <section class="focus-admin-card"><div class="focus-admin-head"><div><span class="eyebrow">ROUND FOCUS</span><strong>Keep teams on the quiz</strong><small>Requests fullscreen and records when a team leaves the quiz tab. A website cannot block other apps.</small></div><label class="focus-switch"><input type="checkbox" ${r.focusRequired===false?'':'checked'} onchange="toggleRoundFocus(${r.n},this.checked)"><span>Focus on</span></label></div><details class="focus-team-details"><summary>Team exceptions & focus alerts <span>${focusEvents.length} alert${focusEvents.length===1?'':'s'}</span></summary><div class="focus-team-list">${teams.map(({t})=>{const exempt=!!S.focusExemptions[`${r.n}-${t.code}`];return `<div class="focus-team-row">${logo(t,30)}<strong>${esc(t.name)}</strong><span class="focus-team-state ${exempt?'exempt':''}">${exempt?'Other apps allowed':'Focus required'}</span><button class="small-link" onclick="toggleTeamFocusException(${r.n},${jsarg(t.code)})">${exempt?'Require focus':'Allow other apps'}</button></div>`}).join('')||'<p class="sub">Add teams to configure focus access.</p>'}${focusEvents.length?`<div class="focus-alert-list"><b>Recent alerts</b>${focusEvents.slice(-8).reverse().map(e=>`<div>${esc((S.teams||[]).find(t=>t.code===e.teamCode)?.name||'Team')} · ${e.event==='tab-hidden'?'Left quiz tab':'Exited fullscreen'} · ${new Date(e.at).toLocaleTimeString()}</div>`).join('')}</div>`:'<p class="sub focus-none">No focus alerts recorded for this round.</p>'}</div></details></section>
       ${r.n>1&&r.status!=='Completed'?`<details class="password-list redesigned-password-list"><summary><span>Team access</span><small>View passwords or grant access individually</small><b aria-hidden="true">⌄</b></summary><div class="team-access-list">${teams.map(({t,p,direct})=>`<div class="team-access-row">${logo(t,32)}<strong>${esc(t.name)}</strong><code>${direct||r.passwordRequired===false?'Direct access':esc(p||'Created when round starts')}</code><button class="small-link" onclick="toggleTeamAccess(${r.n},${jsarg(t.code)})">${direct?'Require password':'Grant direct access'}</button></div>`).join('')||'<p class="sub">Add teams to manage individual access.</p>'}</div></details>`:''}
     </article>`;
+  };
+
+  window.toggleRoundFocus = async function(n,enabled) {
+    const r=(S.rounds||[]).find(x=>Number(x.n)===Number(n));if(!r)return;
+    const old=r.focusRequired;r.focusRequired=!!enabled;
+    if(!await persistPopup(null)){r.focusRequired=old;render();return;}
+    render();toast(enabled?'Focus protection enabled for this round.':'Focus protection disabled for this round.');
+  };
+  window.toggleTeamFocusException = async function(n,code) {
+    S.focusExemptions=S.focusExemptions||{};const key=`${n}-${code}`,old=!!S.focusExemptions[key];
+    if(old)delete S.focusExemptions[key];else S.focusExemptions[key]=true;
+    if(!await persistPopup(null)){if(old)S.focusExemptions[key]=true;else delete S.focusExemptions[key];render();return;}
+    render();toast(old?'Focus protection required for this team.':'This team may use other apps during this round.');
   };
 
   const originalStartRound = window.startRound;
@@ -186,7 +202,7 @@
     if(r?.active){r.participantLocked=true;r.remainingMs=roundDurationMs(r);r.deadlineAt=null;r.lockedAt=Date.now();save();render();toast(`${r.name} started locked. Unlock participant screens when you are ready.`);}
   };
   window.markReady = function(n) { if (!sessionStorage.getItem('quizMasterRulesAccepted')) { showRulesModal(); return; } return baseMarkReady(n); };
-  window.enterRound = function(n) { if (!sessionStorage.getItem('quizMasterRulesAccepted')) { showRulesModal(); return; } hapticsSeen.clear(); autoSubmissionScheduled = false; return baseEnterRound(n); };
+  window.enterRound = async function(n) { if (!sessionStorage.getItem('quizMasterRulesAccepted')) { showRulesModal(); return; } const r=(S.rounds||[]).find(x=>Number(x.n)===Number(n)); if(r?.focusRequired!==false&&!S.team?.focusExempt){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();}catch{}} hapticsSeen.clear(); autoSubmissionScheduled = false; return baseEnterRound(n); };
   window.endRound = (function(base) { return function(n) { closeEnhancementModal(); return base(n); }; })(window.endRound);
 
   function showEnhancementModal(markup) {
@@ -224,7 +240,6 @@
   }
   window.acceptQuizRules = async function() {
     sessionStorage.setItem('quizMasterRulesAccepted', 'yes');
-    try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.(); } catch {}
     try { navigator.vibrate?.(25); } catch {}
     closeEnhancementModal();
   };
@@ -232,13 +247,15 @@
   function armFocusWarning() {
     if (!window.__qmFocusBound) {
       window.__qmFocusBound = true;
-      document.addEventListener('visibilitychange', () => { if (role === 'participant' && S.phase === 'play' && document.hidden) showFocusWarning(); });
-      document.addEventListener('fullscreenchange', () => { if (role === 'participant' && S.phase === 'play' && !document.fullscreenElement) showFocusWarning(); });
+      document.addEventListener('visibilitychange', () => { if (role === 'participant' && S.phase === 'play' && window.qmFocusProtectionActive?.() && document.hidden) { reportFocusEvent('tab-hidden'); showFocusWarning(); } });
+      document.addEventListener('fullscreenchange', () => { if (role === 'participant' && S.phase === 'play' && window.qmFocusProtectionActive?.() && !document.fullscreenElement) { reportFocusEvent('fullscreen-exit'); showFocusWarning(); } });
     }
   }
+  window.qmFocusProtectionActive = () => role==='participant'&&S?.phase==='play'&&activeRound?.focusRequired!==false&&!S.team?.focusExempt;
+  function reportFocusEvent(event){if(!TEAM_TOKEN)return;fetch('/api/team/focus-event',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${TEAM_TOKEN}`},body:JSON.stringify({event})}).catch(()=>{});}
   function showFocusWarning() {
     let note = document.getElementById('focusNote'); if (!note) { note = document.createElement('div'); note.id = 'focusNote'; note.className = 'focus-note'; note.textContent = 'Please stay on the quiz screen while your round is active.'; document.body.append(note); }
-    note.classList.add('visible'); clearTimeout(focusWarningTimer); focusWarningTimer = setTimeout(() => note.classList.remove('visible'), 2600);
+    note.textContent='Focus alert sent to the host. Return to the quiz; the round timer keeps running.';note.classList.add('visible'); clearTimeout(focusWarningTimer); focusWarningTimer = setTimeout(() => note.classList.remove('visible'), 3200);
   }
 
   function addLockAndColorStyles() {
@@ -256,4 +273,6 @@
     `;document.head.append(style);
   }
   addRoundRedesignStyles();
+  const focusStyle=document.createElement('style');focusStyle.textContent=`.focus-admin-card{margin-top:15px;padding:16px;border:1px solid #e4e7f0;border-radius:16px;background:linear-gradient(120deg,#f8f7ff,#f2faf8)}.focus-admin-head{display:flex;align-items:center;justify-content:space-between;gap:18px}.focus-admin-head>div{display:grid;gap:5px}.focus-admin-head .eyebrow{font-size:9px;color:#6555d8}.focus-admin-head strong{font-size:13px;color:#30364d}.focus-admin-head small{font-size:11px;line-height:1.5;color:#6f7588}.focus-switch{display:flex;align-items:center;gap:8px;white-space:nowrap;padding:9px 12px;border-radius:11px;background:#fff;color:#394158;font-size:11px;font-weight:800}.focus-switch input{width:17px;height:17px;accent-color:#6655d8}.focus-team-details{margin-top:13px;border:1px solid #e5e7ef;border-radius:12px;background:#fff;overflow:hidden}.focus-team-details>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none;color:#3d4358;font-size:11px;font-weight:800}.focus-team-details>summary::-webkit-details-marker{display:none}.focus-team-details>summary span{color:#777d90;font-weight:600}.focus-team-list{padding:4px 13px 10px;border-top:1px solid #eff0f5}.focus-team-row{display:grid;grid-template-columns:34px minmax(70px,1fr) auto auto;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #f0f1f5}.focus-team-row strong{font-size:11px;color:#32384d}.focus-team-state{font-size:10px;color:#288568}.focus-team-state.exempt{color:#a56b26}.focus-team-row .small-link{font-size:10px}.focus-alert-list{display:grid;gap:7px;padding:11px 0 2px;color:#6e7386;font-size:10px}.focus-alert-list>b{color:#383e53;font-size:10px}.focus-alert-list>div{padding:7px 9px;border-radius:8px;background:#fff6f4}.focus-none{margin:10px 0 0;font-size:10px}@media(max-width:600px){.focus-admin-head{align-items:flex-start;flex-direction:column}.focus-switch{align-self:stretch;justify-content:center}.focus-team-row{grid-template-columns:30px minmax(0,1fr) auto}.focus-team-state{grid-column:2}.focus-team-row .small-link{grid-column:3;grid-row:1/3}.focus-team-details>summary{align-items:flex-start;flex-direction:column}}@media(prefers-reduced-motion:reduce){.focus-admin-card *{scroll-behavior:auto!important}}`;
+  document.head.append(focusStyle);
 })();
