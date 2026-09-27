@@ -15,6 +15,7 @@
   const hostBlock = () => `<div class="host-banner projector-host">${S.hostPhotoUrl ? `<img class="host-photo" src="${esc(S.hostPhotoUrl)}" alt="${esc(S.hostName || 'Quiz host')}">` : `<div class="host-photo host-initials">${esc(hostInitials(S.hostName || 'Quiz Host'))}</div>`}<div><small>HOSTED BY</small><strong>${esc(S.hostName || 'Quiz Host')}</strong><span>${esc(S.quizName || S.portalName || 'Company quiz')}</span></div></div>`;
   const lobbyGrid = (teams = S.joinedTeams || []) => `<section class="lobby-panel"><div class="lobby-title"><div><span class="eyebrow">LIVE TEAM CHECK-IN</span><h2>Teams in the room</h2></div><span class="lobby-count">${teams.length} / ${S.teamCount || S.teams?.length || 0} joined</span></div><div class="lobby-grid">${teams.length ? teams.map((t, i) => `<div class="lobby-team" style="--team-color:${esc(t.logoColor || logoFor(t.name).logoColor)};--join-index:${i}">${logo(t, 42)}<strong>${esc(t.name)}</strong><span>Checked in</span></div>`).join('') : `<div class="lobby-empty">Waiting for the first team to join…</div>`}</div></section>`;
   const fmtLeft = (deadline) => { const sec = Math.max(0, Math.ceil((Number(deadline) - Date.now()) / 1000)); return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`; };
+  const roundDurationMs = (r) => { const p=String(r?.time||'10:00').split(':').map(Number); return ((p.length>1 ? p[0]*60+p[1] : p[0]*60) || 600)*1000; };
   const activeRound = () => (S.rounds || []).find(r => r.active);
   const timerMarkup = (r) => r?.deadlineAt ? `<div class="projector-timer ${Math.ceil((r.deadlineAt - Date.now()) / 1000) <= 3 ? 'urgent' : ''}" data-deadline="${Number(r.deadlineAt)}">${fmtLeft(r.deadlineAt)}<small>TIME LEFT</small></div>` : '';
 
@@ -24,15 +25,17 @@
       return `<div class="audience-head"><div><div class="eyebrow">WELCOME TO</div><h1>${esc(S.quizName || 'QUIZ MASTER')}</h1><p>Team check-in is open</p></div><span class="badge live">● LIVE LOBBY</span></div>${hostBlock()}${lobbyGrid(teams)}<footer>Teams appear here as they check in on their phones.</footer>`;
     }
     const q = S.projectedQuestion, roundName = q ? (S.rounds || []).find(x => x.n === q.round)?.name || fmtRound(q.round) : '';
-    const question = r && q ? `<section class="audience-question">${timerMarkup(r)}<div class="eyebrow">${esc(roundName)}</div><h2>${esc(q.text)}</h2>${q.options?.length ? `<div class="audience-options">${q.options.map((x,i)=>`<div><b>${String.fromCharCode(65+i)}</b>${esc(x)}</div>`).join('')}</div>` : ''}</section>` : r ? `<section class="audience-question">${timerMarkup(r)}<h2>Round is opening</h2><p>${Number(S.readyCount)||0} of ${Number(S.teamCount)||0} teams are ready. The question appears when all teams have checked in.</p></section>` : !S.allTeamsComplete ? `<section class="audience-question"><h2>${completedBefore ? 'Round complete' : 'Waiting for the host to start a round'}</h2><p>${completedBefore ? 'The next round will appear when the host opens it.' : 'The host will start the first round when teams are ready.'}</p></section>` : '';
+    const question = r && q ? `<section class="audience-question">${timerMarkup(r)}<div class="eyebrow">${esc(roundName)}</div><h2>${esc(q.text)}</h2>${q.options?.length ? `<div class="audience-options">${q.options.map((x,i)=>`<div><b>${String.fromCharCode(65+i)}</b>${esc(x)}</div>`).join('')}</div>` : ''}</section>` : r ? `<section class="audience-question">${timerMarkup(r)}<h2>${r.participantLocked?'Participant screens are locked':'Round is opening'}</h2><p>${r.participantLocked?'The host will unlock the participant screens when the teams should begin.':`${Number(S.readyCount)||0} of ${Number(S.teamCount)||0} teams are ready. The question appears when all teams have checked in.`}</p></section>` : !S.allTeamsComplete ? `<section class="audience-question"><h2>${completedBefore ? 'Round complete' : 'Waiting for the host to start a round'}</h2><p>${completedBefore ? 'The next round will appear when the host opens it.' : 'The host will start the first round when teams are ready.'}</p></section>` : '';
     const board = S.leaderboard ? `<section class="audience-board"><div class="panel-head"><h2>🏆 ${r ? 'Live leaderboard' : completedBefore || S.allTeamsComplete ? 'Round leaderboard' : 'Leaderboard'}</h2><span class="badge live">${S.teams?.length || 0} teams</span></div>${leaderboardTable(false)}</section>` : '';
     const final = S.allTeamsComplete && S.finalQuestions?.length ? `<section class="audience-board final-answers"><div class="panel-head"><h2>Questions & correct answers</h2><span class="badge live">All rounds complete</span></div>${S.finalQuestions.map(x=>`<article class="question"><div class="qtop"><span>${esc((S.rounds||[]).find(a=>a.n===x.round)?.name||fmtRound(x.round))}</span><span class="correct-key">${Number(x.points)||0} points</span></div><p>${esc(x.text)}</p><div class="audience-answer">Correct answer: <strong>${esc(x.answer)}</strong></div></article>`).join('')}</section>` : '';
     return `<div class="audience-head"><div><div class="eyebrow">LIVE TOURNAMENT</div><h1>${esc(S.quizName || 'QUIZ MASTER')}</h1><p>${r ? `● ${esc(r.name)} is live` : completedBefore ? 'Round standings' : 'Team check-in'}</p></div><span class="badge live">● UPDATING LIVE</span></div>${hostBlock()}${question}${r&&!q?lobbyGrid(teams):''}${board}${final}<footer>${esc(S.quizName || 'QUIZ MASTER')} · Live audience display</footer>`;
   };
 
   window.participantWaiting = function() {
-    const old = baseParticipantWaiting();
+    let old = baseParticipantWaiting();
     const teams = S.joinedTeams || [];
+    const r = activeRound();
+    if (r?.participantLocked) old = old.replace('<section class="card waiting-card">', '<section class="card waiting-card participant-locked" data-participant-locked="true">').replace('<div class="progressline"', '<div class="participant-lock-notice">🔒 Participant screens are locked by the host. Please wait for the unlock signal.</div><div class="progressline"');
     return old.replace('</section></main>', `${lobbyGrid(teams)}</section></main>`);
   };
 
@@ -51,6 +54,7 @@
 
   window.startPolling = function() {
     baseStartPolling(); clearInterval(displayTimer);
+    clearInterval(window.__qmLockMonitor);
     if (role === 'audience' || role === 'participant') displayTimer = setInterval(() => {
       document.querySelectorAll('.projector-timer[data-deadline], #roundTimer').forEach(el => {
         const deadline = Number(el.dataset.deadline || activeRound?.deadlineAt); if (!deadline) return;
@@ -59,6 +63,16 @@
         else { el.firstChild.textContent = fmtLeft(deadline); el.classList.toggle('urgent', remain <= 3); }
       });
     }, 250);
+    if (role === 'participant' && TEAM_TOKEN) window.__qmLockMonitor = setInterval(async () => {
+      if (S.phase !== 'play') return;
+      try {
+        const d = await api('/api/team/state'), previous = activeRound?.participantLocked, r = (d.state.rounds || []).find(x => Number(x.n) === Number(activeRound?.n));
+        S = Object.assign(S, d.state, { team:d.team, answers:d.answers, revealAnswers:d.revealAnswers, phase:'play', role:'participant' });
+        if (!r?.active) { activeRound = null; activeQuestionSet = []; S.phase = 'waiting'; render(); startPolling(); return; }
+        if (activeRound) { activeRound.deadlineAt = r.deadlineAt; activeRound.participantLocked = !!r.participantLocked; }
+        if (previous !== !!r.participantLocked) render();
+      } catch {}
+    }, 1800);
   };
 
   window.startClock = function() {
@@ -98,10 +112,27 @@
     return `<button class="mascot-hint" onclick="openAnswerStatus()"><span class="owl-mini">🦉</span><span><strong>Tap to check your answer status</strong><small>${right} correct · ${wrong} incorrect</small></span><i>Open scorecard →</i></button>`;
   };
 
+  window.roundCard = function(r) {
+    const qcount=(S.questions||[]).filter(q=>questionRound(q)===r.n).length;
+    const lines=(S.teams||[]).map(t=>({t,p:S.passwords?.[`${r.n}-${t.code}`],direct:!!S.roundAccess?.[`${r.n}-${t.code}`]}));
+    const ready=(S.readyByRound?.[String(r.n)]||[]).filter(code=>S.teams.some(t=>t.code===code)).length;
+    const allDirect=!!S.teams.length&&S.teams.every(t=>S.roundAccess?.[`${r.n}-${t.code}`]);
+    return `<article class="card round-card round-card-modern ${r.active?'round-is-live':''}"><div class="round-top"><div class="round-title"><span class="round-n">${r.n}</span><div><strong>${esc(r.name)}</strong><small>${qcount} questions · ${roundMinutes(r.time)} minutes · ${ready}/${S.teams.length} ready</small></div></div><span class="badge ${r.active?'live':''}">${esc(r.status||'Locked')}</span></div><div class="form-grid round-fields"><div class="field"><label>Round name</label><input value="${esc(r.name)}" onchange="setRound(${r.n},'name',this.value)"></div><div class="field"><label>Time limit (minutes)</label><input type="number" min="1" max="240" value="${roundMinutes(r.time)}" onchange="setRound(${r.n},'time',this.value)"></div><div class="field"><label>Default points</label><input type="number" min="0" value="${Number(r.points??10)}" onchange="setRound(${r.n},'points',this.value)"></div></div>${r.n>1?`<label class="access-toggle"><input type="checkbox" ${r.passwordRequired===false?'':'checked'} onchange="togglePasswordMode(${r.n},this.checked)"> Require team passwords for this round</label><div class="row-actions">${btn(allDirect?'Require passwords from all teams':'Grant direct access to all teams',`toggleAllTeamAccess(${r.n})`,'tiny light')}</div>`:''}<div class="round-access-control"><span class="access-state ${r.active?(r.participantLocked?'locked':'unlocked'):''}">${r.active?(r.participantLocked?'🔒 Participant screens locked':'● Participant screens unlocked'):'Participant access opens when this round starts'}</span><div class="row-actions">${r.active?btn(r.participantLocked?'🔓 Unlock participant screens':'🔒 Lock participant screens',`toggleParticipantLock(${r.n})`,r.participantLocked?'tiny unlock-action':'tiny lock-action'):r.status==='Completed'?'<span class="sub">Round complete · Waiting for admin</span>':r.n===1?btn('▶ Start Round 1',`startRound(${r.n})`,'tiny'):btn('▶ Start round',`openRoundForAll(${r.n})`,'tiny')}${r.n>1?btn('↓ Password sheet',`downloadRoundPasswords(${r.n})`,'tiny light'):''}</div></div>${r.n>1?`<details class="password-list"><summary>Team access · grant individually or review passwords</summary>${lines.map(({t,p,direct})=>`<div>${logo(t,25)}<strong>${esc(t.name)}</strong><code>${direct||r.passwordRequired===false?'Direct access':esc(p||'Password generated when round starts')}</code><button class="small-link" onclick="toggleTeamAccess(${r.n},${jsarg(t.code)})">${direct?'Require password':'Grant direct access'}</button></div>`).join('')}</details>`:''}</article>`;
+  };
+
+  window.toggleParticipantLock = async function(n) {
+    const r=(S.rounds||[]).find(x=>Number(x.n)===Number(n)); if(!r?.active)return;
+    if(r.participantLocked){r.participantLocked=false;r.deadlineAt=Date.now()+Math.max(1000,Number(r.remainingMs)||roundDurationMs(r));delete r.remainingMs;delete r.lockedAt;}
+    else {r.remainingMs=Math.max(1000,Number(r.deadlineAt||0)-Date.now());r.participantLocked=true;r.lockedAt=Date.now();r.deadlineAt=null;}
+    const ok=await persistPopup(null);if(!ok)return;render();toast(r.participantLocked?'Participant screens locked. The round timer is paused.':'Participant screens unlocked. The round timer is running.');
+  };
+
   const originalStartRound = window.startRound;
   window.startRound = function(n) {
     hapticsSeen.clear(); autoSubmissionScheduled = false;
-    return originalStartRound(n);
+    originalStartRound(n);
+    const r=(S.rounds||[]).find(x=>Number(x.n)===Number(n));
+    if(r?.active){r.participantLocked=true;r.remainingMs=roundDurationMs(r);r.deadlineAt=null;r.lockedAt=Date.now();save();render();toast(`${r.name} started locked. Unlock participant screens when you are ready.`);}
   };
   window.markReady = function(n) { if (!sessionStorage.getItem('quizMasterRulesAccepted')) { showRulesModal(); return; } return baseMarkReady(n); };
   window.enterRound = function(n) { if (!sessionStorage.getItem('quizMasterRulesAccepted')) { showRulesModal(); return; } hapticsSeen.clear(); autoSubmissionScheduled = false; return baseEnterRound(n); };
@@ -128,7 +159,11 @@
   window.render = function() {
     oldRender(); addEnhancementStyles();
     if (role === 'participant' && TEAM_TOKEN && S.phase !== 'play' && !sessionStorage.getItem('quizMasterRulesAccepted')) showRulesModal();
-    if (role === 'participant' && S.phase === 'play') armFocusWarning();
+    if (role === 'participant' && S.phase === 'play') {
+      armFocusWarning();
+      if(activeRound?.participantLocked){if(!document.getElementById('roundLockOverlay')){const overlay=document.createElement('div');overlay.id='roundLockOverlay';overlay.className='enhance-overlay visible';overlay.innerHTML='<section class="enhance-modal lock-modal"><div class="modal-icon lock-icon">🔒</div><div class="eyebrow">HOST CONTROL</div><h2>Round paused by your host</h2><p>Your answers are saved on this device while participant screens are locked. Wait here; the timer is paused and your team can continue when the host unlocks the round.</p><span class="lock-wait-pulse">Waiting for unlock…</span></section>';document.body.append(overlay);}}
+      else document.getElementById('roundLockOverlay')?.remove();
+    } else document.getElementById('roundLockOverlay')?.remove();
   };
   function showRulesModal() {
     if (document.getElementById('rulesModal')) return;
@@ -154,4 +189,12 @@
     let note = document.getElementById('focusNote'); if (!note) { note = document.createElement('div'); note.id = 'focusNote'; note.className = 'focus-note'; note.textContent = 'Please stay on the quiz screen while your round is active.'; document.body.append(note); }
     note.classList.add('visible'); clearTimeout(focusWarningTimer); focusWarningTimer = setTimeout(() => note.classList.remove('visible'), 2600);
   }
+
+  function addLockAndColorStyles() {
+    if(document.getElementById('qmLockColorStyles'))return;
+    const style=document.createElement('style');style.id='qmLockColorStyles';style.textContent=`
+      .round-access-control{margin-top:15px;padding:14px 15px;border:1px solid #e6e5f0;border-radius:15px;background:linear-gradient(115deg,#faf9ff,#f3faf9)}.round-access-control .row-actions{margin-top:9px}.access-state{font-size:11px;font-weight:750;color:#7c8192}.access-state.locked{color:#b34457}.access-state.unlocked{color:#258767}.lock-action{background:linear-gradient(120deg,#a93c55,#d85c68)!important;box-shadow:0 6px 18px #bd465522!important}.unlock-action{background:linear-gradient(120deg,#168969,#38b897)!important;box-shadow:0 6px 18px #23a7832c!important}.round-card-modern{position:relative;overflow:hidden;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.round-card-modern:before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#7666e9,#36b69c);opacity:.35}.round-card-modern:hover{transform:translateY(-3px);box-shadow:0 18px 42px #43436a17!important}.round-card-modern.round-is-live{border-color:#c9c3ff}.participant-lock-notice{margin:18px auto 8px;max-width:460px;padding:14px 16px;border:1px solid #f0d7dc;border-radius:13px;background:linear-gradient(110deg,#fff3f4,#fff9f0);color:#9f3549;font-size:12px;font-weight:750;animation:lockReveal .32s both}.lock-modal{text-align:center}.lock-modal .lock-icon{margin:0 auto 14px}.lock-wait-pulse{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:20px;background:#fff2f2;color:#a93c55;font-size:11px;font-weight:800;animation:waitPulse 1.3s ease-in-out infinite}.score-answers article:hover,.share-links>div:hover{border-color:#bcb4ff;box-shadow:0 8px 22px #48437d12}.btn{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}.btn:hover{transform:translateY(-1px);filter:saturate(1.12);box-shadow:0 8px 20px #423a8728}.btn:active{transform:translateY(0) scale(.985)}input:focus,textarea:focus,select:focus{outline:3px solid #7566e925!important;border-color:#7767e8!important;box-shadow:0 0 0 1px #7767e8!important}@keyframes lockReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes waitPulse{50%{box-shadow:0 0 0 6px #e9525a12;opacity:.72}}@media(prefers-reduced-motion:reduce){.round-card-modern,.btn{transition:none!important}.round-card-modern:hover,.btn:hover{transform:none!important}.lock-wait-pulse{animation:none}}
+    `;document.head.append(style);
+  }
+  addLockAndColorStyles();
 })();

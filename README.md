@@ -10,7 +10,7 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 - Popup forms close with a short animation only after the database confirms a successful save; if saving fails, the popup stays open and keeps the entered values for retry.
 - Teams enter the branded waiting lobby after login. Round 1 starts automatically on team pages when the admin opens it. The projector waits until every team is ready before revealing each round’s question.
 - A ready team can enter an active round without waiting for the other teams; the projector still waits for the full readiness count before revealing the question. Admins can grant later-round access team-by-team or to all teams.
-- When the admin starts Round 1, checked-in teams automatically enter it. Completing or timing out a round returns teams to a waiting state; the next round does not open until the admin starts and grants access. The admin can start a later round and grant access to all teams with one button.
+- When the admin starts a round, participant screens remain locked until the admin unlocks them. Completing or timing out a round returns teams to a waiting state; the next round does not open until the admin starts and unlocks it. For later rounds the admin can grant access to all teams with one button.
 - Admin settings can customize the company/event page title and quiz master name/photo. The participant waiting area and login screen show that branding.
 - Round 1 has no password. For later rounds, the admin can keep passwords on, turn them off for everyone, or grant direct access to selected teams.
 - Admins can set the tournament to 1–20 rounds and edit each round name. Removing a round is blocked if it is active or has submitted answers; its questions are removed after confirmation.
@@ -26,6 +26,8 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 - Projector and participant round screens display the active timer; the final three seconds pulse red. On supported phones the participant page requests a light vibration at 3, 2, and 1 seconds.
 - Before a team starts, a rules dialog offers fullscreen and vibration. The site can warn when the participant leaves the page or exits fullscreen, but browsers do not let websites block app switching or enforce fullscreen.
 - After each round, participants can open an animated answer-status scorecard from the owl hint. A submission confirmation dialog explains that answers will lock.
+- Each round now starts with participant screens locked. The admin can unlock the round to start the timer, lock it again to pause participants and the remaining time, then unlock it to resume. Submissions are rejected by the Worker while locked.
+- Round cards show a clear participant lock state and a separate lock/unlock control. The projector announces the lock while waiting for the host to begin.
 
 ## Update the existing GitHub repository
 
