@@ -43,7 +43,7 @@ async function handleApi(req,env,url){
  }
  if(m==='POST'&&p==='/api/team/login'){
    const b=await body(req),code=String(b?.code||'').trim().toUpperCase(),{state}=await getState(env),team=(state.teams||[]).find(t=>t.code===code);if(!team)return fail(401,'Team code not found');
-   const t=makeToken();await env.DB.prepare('INSERT INTO sessions(token,kind,team_code,expires) VALUES(?,?,?,?)').bind(t,'team',code,Date.now()+24*60*60*1000).run();await changeState(env,s=>{s.presence=s.presence||{};s.presence[code]=Date.now();return null});const fresh=(await getState(env)).state,active=(fresh.rounds||[]).find(r=>r.active),focusExempt=!!active&&!!fresh.focusExemptions?.[${active.n}-];return json({token:t,team:{name:team.name,code:team.code,progress:team.progress,logo:team.logo,logoColor:team.logoColor,focusExempt},state:safeState(fresh)});
+   const t=makeToken();await env.DB.prepare('INSERT INTO sessions(token,kind,team_code,expires) VALUES(?,?,?,?)').bind(t,'team',code,Date.now()+24*60*60*1000).run();await changeState(env,s=>{s.presence=s.presence||{};s.presence[code]=Date.now();return null});const fresh=(await getState(env)).state,active=(fresh.rounds||[]).find(r=>r.active),focusExempt=!!active&&!!fresh.focusExemptions?.[`${active.n}-${code}`];return json({token:t,team:{name:team.name,code:team.code,progress:team.progress,logo:team.logo,logoColor:team.logoColor,focusExempt},state:safeState(fresh)});
  }
  if(m==='GET'&&p==='/api/public/state'){await syncExpired(env);return json(safeState((await getState(env)).state));}
  if(m==='POST'&&p==='/api/admin/media'){
