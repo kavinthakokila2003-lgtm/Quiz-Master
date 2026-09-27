@@ -21,10 +21,15 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 - The audience page updates the score-sorted leaderboard live and animates rank rows. It shows projected questions only after all teams are ready.
 - On round start, the first question in that round is projected automatically. The audience view switches to the leaderboard when the round ends, then transitions into the next round after its readiness gate is met. Projected questions are hidden outside their active round.
 - Projector transitions, question entrances, leaderboard rank changes, and hover states use short motion effects; reduced-motion preferences are respected.
+- Admin Settings now includes one-click copy buttons for the participant and projector links, plus editable event rules.
+- The participant and projector lobby mirror live team check-ins with each team’s logo and animated arrival cards. Presence expires automatically after teams disconnect.
+- Projector and participant round screens display the active timer; the final three seconds pulse red. On supported phones the participant page requests a light vibration at 3, 2, and 1 seconds.
+- Before a team starts, a rules dialog offers fullscreen and vibration. The site can warn when the participant leaves the page or exits fullscreen, but browsers do not let websites block app switching or enforce fullscreen.
+- After each round, participants can open an animated answer-status scorecard from the owl hint. A submission confirmation dialog explains that answers will lock.
 
 ## Update the existing GitHub repository
 
-Upload and commit the updated `worker.js`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, and `app.js`) to the same repository connected to Cloudflare. Keep the D1 database ID in `wrangler.jsonc` unchanged. Cloudflare should deploy after the GitHub commit.
+Upload and commit the updated `worker.js`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, `app.js`, and `enhancements.js`) to the same repository connected to Cloudflare. Keep the D1 database ID in `wrangler.jsonc` unchanged. Cloudflare should deploy after the GitHub commit.
 
 Do not run the database schema again. The media table is created automatically when you upload the first file. Your existing `ADMIN_PASSWORD` secret remains managed in Cloudflare and is not included here.
 
