@@ -169,6 +169,9 @@
     const teams=(S.teams||[]).map(t=>({t,p:S.passwords?.[`${r.n}-${t.code}`],direct:!!S.roundAccess?.[`${r.n}-${t.code}`]}));
     const ready=(S.readyByRound?.[String(r.n)]||[]).filter(code=>S.teams.some(t=>t.code===code)).length;
     const allDirect=!!S.teams.length&&S.teams.every(t=>S.roundAccess?.[`${r.n}-${t.code}`]);
+    S.focusExemptions=S.focusExemptions||{};
+    S.focusEvents=S.focusEvents||[];
+    const focusEvents=S.focusEvents.filter(e=>Number(e.round)===Number(r.n));
     const accessText=r.status==='Completed'?'Round complete':r.active?(r.participantLocked?'Participants are locked · timer paused':'Participants are unlocked · timer running'):'Participants are locked until the round starts';
     const action=r.active?btn(r.participantLocked?'Unlock participant screens':'Lock participant screens',`toggleParticipantLock(${r.n})`,r.participantLocked?'tiny unlock-action':'tiny lock-action'):r.status==='Completed'?'<span class="round-complete-label">✓ Round complete</span>':r.n===1?btn(`Start ${esc(r.name)}`,`startRound(${r.n})`,'tiny'):btn(`Start ${esc(r.name)} · unlock teams`,`openRoundForAll(${r.n})`,'tiny');
     return `<article class="card round-card round-card-modern ${r.active?'round-is-live':''} ${r.status==='Completed'?'round-is-complete':''}">
