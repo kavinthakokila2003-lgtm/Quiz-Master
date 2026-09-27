@@ -28,6 +28,7 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 - After each round, participants can open an animated answer-status scorecard from the owl hint. A submission confirmation dialog explains that answers will lock.
 - Each round now starts with participant screens locked. The admin can unlock the round to start the timer, lock it again to pause participants and the remaining time, then unlock it to resume. Submissions are rejected by the Worker while locked.
 - Round cards show a clear participant lock state and a separate lock/unlock control. The projector announces the lock while waiting for the host to begin.
+- Destructive actions such as removing a team, deleting a question, or removing rounds use styled in-site confirmations instead of browser popups. Removed team names are retained for historical answer exports.
 
 ## Update the existing GitHub repository
 

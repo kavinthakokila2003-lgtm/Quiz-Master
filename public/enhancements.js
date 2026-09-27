@@ -7,6 +7,7 @@
   const baseSubmitRound = window.submitRound;
   const baseEnterRound = window.enterRound;
   const baseMarkReady = window.markReady;
+  const baseSetRoundCount = window.setRoundCount;
   let displayTimer = 0;
   let countdownPulse = 0;
   let autoSubmissionScheduled = false;
@@ -127,6 +128,40 @@
     const ok=await persistPopup(null);if(!ok)return;render();toast(r.participantLocked?'Participant screens locked. The round timer is paused.':'Participant screens unlocked. The round timer is running.');
   };
 
+  window.removeTeam = function(code) {
+    const team=(S.teams||[]).find(t=>t.code===code); if(!team)return;
+    showEnhancementModal(`<div class="modal-icon danger-icon">⌫</div><div class="eyebrow">TEAM ACCESS</div><h2>Remove ${esc(team.name)}?</h2><p>This team will no longer be able to sign in. Its submitted answers will remain in the export under the team name.</p><div class="modal-actions"><button class="btn light" onclick="closeEnhancementModal()">Keep team</button><button class="btn danger-button" onclick="closeEnhancementModal();removeTeamConfirmed(${jsarg(code)})">Remove team</button></div>`);
+  };
+  window.removeTeamConfirmed = async function(code) {
+    const team=(S.teams||[]).find(t=>t.code===code);if(!team)return;
+    const previous=JSON.parse(JSON.stringify(S));
+    S.archivedTeams=[...(S.archivedTeams||[]).filter(t=>t.code!==code),{code,name:team.name}];
+    S.teams=S.teams.filter(t=>t.code!==code);
+    for(const map of [S.passwords,S.roundAccess,S.verifiedRounds])if(map)for(const key of Object.keys(map))if(key.endsWith(`-${code}`))delete map[key];
+    for(const round of Object.keys(S.readyByRound||{}))S.readyByRound[round]=(S.readyByRound[round]||[]).filter(x=>x!==code);
+    if(S.presence)delete S.presence[code];
+    if(!await persistPopup(null)){S=previous;render();return;}
+    render();toast(`${team.name} removed. Past answers are still available in the export.`);
+  };
+  window.deleteQuestion = function(id) {
+    const q=(S.questions||[]).find(x=>String(x.id)===String(id));if(!q)return;
+    showEnhancementModal(`<div class="modal-icon danger-icon">⌫</div><div class="eyebrow">QUESTION BANK</div><h2>Delete this question?</h2><p>${esc(q.text)}</p><div class="modal-actions"><button class="btn light" onclick="closeEnhancementModal()">Cancel</button><button class="btn danger-button" onclick="closeEnhancementModal();deleteQuestionConfirmed(${jsarg(id)})">Delete question</button></div>`);
+  };
+  window.deleteQuestionConfirmed = async function(id) {
+    const previous=JSON.parse(JSON.stringify(S));
+    S.questions=(S.questions||[]).filter(q=>String(q.id)!==String(id));
+    (S.rounds||[]).forEach(r=>r.q=S.questions.filter(q=>questionRound(q)===r.n).length);
+    if(String(S.projectedQuestionId)===String(id))S.projectedQuestionId=null;
+    if(!await persistPopup(null)){S=previous;render();return;}
+    render();toast('Question deleted.');
+  };
+  window.setRoundCount = function() {
+    const count=Math.max(1,Math.min(20,Math.floor(Number($('roundCount')?.value)||1))),current=(S.rounds||[]).length;
+    if(count<current){const removing=(S.questions||[]).filter(q=>questionRound(q)>count).length;if(removing){showEnhancementModal(`<div class="modal-icon danger-icon">!</div><div class="eyebrow">ROUND SETUP</div><h2>Remove ${current-count} round${current-count===1?'':'s'}?</h2><p>${removing} question${removing===1?'':'s'} in the removed rounds will also be deleted. Rounds with submitted answers or an active round cannot be removed.</p><div class="modal-actions"><button class="btn light" onclick="closeEnhancementModal()">Cancel</button><button class="btn danger-button" onclick="closeEnhancementModal();applyRoundCount(${count})">Remove rounds</button></div>`);return;}}
+    const saved=window.confirm;window.confirm=()=>true;try{baseSetRoundCount();}finally{window.confirm=saved;}
+  };
+  window.applyRoundCount = function(count) { const saved=window.confirm;window.confirm=()=>true;try{$('roundCount').value=String(count);baseSetRoundCount();}finally{window.confirm=saved;} };
+
   const originalStartRound = window.startRound;
   window.startRound = function(n) {
     hapticsSeen.clear(); autoSubmissionScheduled = false;
@@ -193,7 +228,7 @@
   function addLockAndColorStyles() {
     if(document.getElementById('qmLockColorStyles'))return;
     const style=document.createElement('style');style.id='qmLockColorStyles';style.textContent=`
-      .round-access-control{margin-top:15px;padding:14px 15px;border:1px solid #e6e5f0;border-radius:15px;background:linear-gradient(115deg,#faf9ff,#f3faf9)}.round-access-control .row-actions{margin-top:9px}.access-state{font-size:11px;font-weight:750;color:#7c8192}.access-state.locked{color:#b34457}.access-state.unlocked{color:#258767}.lock-action{background:linear-gradient(120deg,#a93c55,#d85c68)!important;box-shadow:0 6px 18px #bd465522!important}.unlock-action{background:linear-gradient(120deg,#168969,#38b897)!important;box-shadow:0 6px 18px #23a7832c!important}.round-card-modern{position:relative;overflow:hidden;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.round-card-modern:before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#7666e9,#36b69c);opacity:.35}.round-card-modern:hover{transform:translateY(-3px);box-shadow:0 18px 42px #43436a17!important}.round-card-modern.round-is-live{border-color:#c9c3ff}.participant-lock-notice{margin:18px auto 8px;max-width:460px;padding:14px 16px;border:1px solid #f0d7dc;border-radius:13px;background:linear-gradient(110deg,#fff3f4,#fff9f0);color:#9f3549;font-size:12px;font-weight:750;animation:lockReveal .32s both}.lock-modal{text-align:center}.lock-modal .lock-icon{margin:0 auto 14px}.lock-wait-pulse{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:20px;background:#fff2f2;color:#a93c55;font-size:11px;font-weight:800;animation:waitPulse 1.3s ease-in-out infinite}.score-answers article:hover,.share-links>div:hover{border-color:#bcb4ff;box-shadow:0 8px 22px #48437d12}.btn{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}.btn:hover{transform:translateY(-1px);filter:saturate(1.12);box-shadow:0 8px 20px #423a8728}.btn:active{transform:translateY(0) scale(.985)}input:focus,textarea:focus,select:focus{outline:3px solid #7566e925!important;border-color:#7767e8!important;box-shadow:0 0 0 1px #7767e8!important}@keyframes lockReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes waitPulse{50%{box-shadow:0 0 0 6px #e9525a12;opacity:.72}}@media(prefers-reduced-motion:reduce){.round-card-modern,.btn{transition:none!important}.round-card-modern:hover,.btn:hover{transform:none!important}.lock-wait-pulse{animation:none}}
+      .round-access-control{margin-top:15px;padding:14px 15px;border:1px solid #e6e5f0;border-radius:15px;background:linear-gradient(115deg,#faf9ff,#f3faf9)}.round-access-control .row-actions{margin-top:9px}.access-state{font-size:11px;font-weight:750;color:#7c8192}.access-state.locked{color:#b34457}.access-state.unlocked{color:#258767}.lock-action{background:linear-gradient(120deg,#a93c55,#d85c68)!important;box-shadow:0 6px 18px #bd465522!important}.unlock-action{background:linear-gradient(120deg,#168969,#38b897)!important;box-shadow:0 6px 18px #23a7832c!important}.round-card-modern{position:relative;overflow:hidden;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.round-card-modern:before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#7666e9,#36b69c);opacity:.35}.round-card-modern:hover{transform:translateY(-3px);box-shadow:0 18px 42px #43436a17!important}.round-card-modern.round-is-live{border-color:#c9c3ff}.participant-lock-notice{margin:18px auto 8px;max-width:460px;padding:14px 16px;border:1px solid #f0d7dc;border-radius:13px;background:linear-gradient(110deg,#fff3f4,#fff9f0);color:#9f3549;font-size:12px;font-weight:750;animation:lockReveal .32s both}.lock-modal{text-align:center}.lock-modal .lock-icon{margin:0 auto 14px}.lock-wait-pulse{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:20px;background:#fff2f2;color:#a93c55;font-size:11px;font-weight:800;animation:waitPulse 1.3s ease-in-out infinite}.danger-icon{background:linear-gradient(145deg,#fff0f1,#ffe6e9)!important;color:#bc3d51!important}.danger-button{background:linear-gradient(120deg,#b63a50,#d65265)!important;box-shadow:0 7px 18px #c743582c!important}.enhance-modal .eyebrow{margin-top:2px}.enhance-modal .danger-button:hover{box-shadow:0 10px 24px #c7435844!important}.score-answers article:hover,.share-links>div:hover{border-color:#bcb4ff;box-shadow:0 8px 22px #48437d12}.btn{transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}.btn:hover{transform:translateY(-1px);filter:saturate(1.12);box-shadow:0 8px 20px #423a8728}.btn:active{transform:translateY(0) scale(.985)}input:focus,textarea:focus,select:focus{outline:3px solid #7566e925!important;border-color:#7767e8!important;box-shadow:0 0 0 1px #7767e8!important}@keyframes lockReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes waitPulse{50%{box-shadow:0 0 0 6px #e9525a12;opacity:.72}}@media(prefers-reduced-motion:reduce){.round-card-modern,.btn{transition:none!important}.round-card-modern:hover,.btn:hover{transform:none!important}.lock-wait-pulse{animation:none}}
     `;document.head.append(style);
   }
   addLockAndColorStyles();
