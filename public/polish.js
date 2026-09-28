@@ -325,6 +325,47 @@
     setInterval(attach, 1500);
   }
 
+
+  // ---- Rounds tab safety net: a bad piece of data must never freeze the tab ----
+  function showErrorBanner(msg) {
+    let b = document.getElementById('qmErrorBanner');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'qmErrorBanner';
+      b.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:2147483000;padding:10px 14px;border-radius:12px;background:#fff1f2;border:1px solid #f3b6be;color:#8f2536;font:600 12px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0002';
+      b.addEventListener('click', () => b.remove());
+      document.body.append(b);
+    }
+    b.textContent = 'Rounds tab problem (tap to dismiss): ' + msg;
+  }
+  const baseRoundCard = window.roundCard;
+  if (typeof baseRoundCard === 'function') {
+    window.roundCard = function (r) {
+      try { return baseRoundCard(r); }
+      catch (e) {
+        console.error('roundCard failed', e);
+        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
+        const name = esc(r && r.name || ('Round ' + (r && r.n)));
+        const live = r && r.active;
+        const action = live && typeof toggleParticipantLock === 'function'
+          ? `<button class="btn tiny" onclick="toggleParticipantLock(${r.n})">${r.participantLocked ? 'Unlock participant screens' : 'Lock participant screens'}</button>`
+          : (r && !live && r.status !== 'Completed' && typeof startRound === 'function' ? `<button class="btn tiny" onclick="startRound(${r.n})">Start ${name}</button>` : '');
+        return `<article class="card round-card"><header><span class="eyebrow">ROUND ${r ? r.n : ''}</span><strong>${name}</strong></header><p style="font-size:12px;color:#5f6478">This round could not be drawn in full, but its main controls still work.</p>${action}</article>`;
+      }
+    };
+  }
+  const baseRoundsPage = window.roundsPage;
+  if (typeof baseRoundsPage === 'function') {
+    window.roundsPage = function () {
+      try { return baseRoundsPage.apply(this, arguments); }
+      catch (e) {
+        console.error('roundsPage failed', e);
+        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
+        return '<section class="card" style="padding:18px"><strong>Rounds could not be displayed.</strong><p style="font-size:12px;color:#5f6478">Reload the page. If this keeps happening, send the red message at the top of the screen.</p></section>';
+      }
+    };
+  }
+
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
