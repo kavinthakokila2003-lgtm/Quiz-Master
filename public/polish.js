@@ -101,7 +101,7 @@
 
       /* Light shine sweep across primary buttons on hover — cheap, GPU-only */
       .btn{position:relative;overflow:hidden}
-      .btn:before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
+      .btn:before{content:'';pointer-events:none;position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
       .btn:hover:before{transform:translateX(120%)}
 
       /* Sidebar nav icon: a touch more life on hover/active */
@@ -121,7 +121,7 @@
       .grant-all-bar .btn{white-space:nowrap}
 
       /* ---------- Waiting lobby hero (participants + projector) ---------- */
-      .lobby-hero{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;max-width:820px;margin:0 auto 22px;padding:22px 26px;border-radius:24px;background:linear-gradient(135deg,#ffffff14,#ffffff06);border:1px solid #ffffff26;backdrop-filter:blur(8px);animation:hostReveal .6s cubic-bezier(.2,.8,.2,1) both}
+      .lobby-hero{pointer-events:none;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;max-width:820px;margin:0 auto 22px;padding:22px 26px;border-radius:24px;background:linear-gradient(135deg,#ffffff14,#ffffff06);border:1px solid #ffffff26;backdrop-filter:blur(8px);animation:hostReveal .6s cubic-bezier(.2,.8,.2,1) both}
       .lobby-hero.light{background:linear-gradient(135deg,#fff,#f6f4ff);border-color:#dcd8fb;color:#232742}
       .lobby-hero img,.lobby-hero .lobby-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #ffffffcc;box-shadow:0 0 0 4px #7566e94d,0 12px 28px #0003;animation:heroFloat 5s ease-in-out infinite}
       .lobby-hero .lobby-avatar{display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,#7161f2,#2b9c86);color:#fff}
@@ -308,10 +308,12 @@
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
-      baseRenderForPolish();
-      addPolishStyles();
-      animateStatCounters();
-      try { decorateRounds(); decorateLobby(); } catch (e) { console.warn(e); }
+      // The original render always runs first; nothing below may ever stop it or block clicks.
+      baseRenderForPolish.apply(this, arguments);
+      try { addPolishStyles(); } catch (e) { console.warn('polish styles', e); }
+      try { animateStatCounters(); } catch (e) { console.warn('polish counters', e); }
+      try { decorateRounds(); } catch (e) { console.warn('polish rounds', e); }
+      try { decorateLobby(); } catch (e) { console.warn('polish lobby', e); }
     };
   }
 })();
