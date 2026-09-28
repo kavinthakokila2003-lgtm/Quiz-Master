@@ -109,6 +109,15 @@
       .sidebar .nav.active .ico{animation:navPop .3s ease both}
       @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
 
+      /* Avoid replaying entrance effects on each live state refresh. */
+      .hero,.team-login,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
+      .host-banner,.host-welcome,.projector-host,.sidebar .nav.active .ico,.leader-row:nth-child(1) .rank{animation:none!important}
+      .hero{background-size:cover!important}
+      .brand{letter-spacing:-.035em}.brand .mark{font-weight:900;letter-spacing:-.08em;border-radius:13px;box-shadow:0 8px 20px #6658d538}
+      h1,h2,h3{letter-spacing:-.035em} .welcome h1{font-size:clamp(25px,3vw,34px);line-height:1.08}.nav{font-weight:700}
+      .team-logo{border-radius:29%;filter:saturate(1.08)}.team-logo-glyph{font-weight:800}
+      .round-team-selection .team-access-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px}.round-team-pick{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.round-team-pick input{accent-color:#6556d8;width:17px;height:17px}.round-team-pick strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.round-team-selected{background:linear-gradient(100deg,#f3f1ff,#fbfcff)}.round-team-selection .team-access-row>code{margin-left:0}.round-team-selection button:disabled{opacity:.55;cursor:not-allowed}.team-password-action{white-space:nowrap}
+      @media(max-width:700px){.round-team-selection .team-access-row{grid-template-columns:1fr;align-items:start}.round-team-pick{min-height:42px}}
       @media(prefers-reduced-motion:reduce){
         .enhance-overlay,.enhance-modal{transition:none!important}
         .host-banner,.host-welcome,.projector-host{animation:none!important}
