@@ -35,14 +35,20 @@ This update uses your current Cloudflare Worker and D1 database. It does not add
 
 ## Update the existing GitHub repository
 
-Upload and commit the updated `worker.mjs`, `wrangler.jsonc`, `.assetsignore`, and the complete `public` folder (`admin.html`, `index.html`, `participant.html`, `audience.html`, `app.js`, `enhancements.js`, and `polish.js`) to the same repository connected to Cloudflare. Keep the D1 database ID in `wrangler.jsonc` unchanged. Cloudflare should deploy after the GitHub commit.
+Upload and commit `worker.mjs`, `worker.js`, `wrangler.json`, `.assetsignore`, and the complete `public` folder to the same GitHub repository connected to Cloudflare. This package uses `wrangler.json` with `main` set to `./worker.mjs`. Replace the old config, delete any extra `wrangler.jsonc`, and keep only one Wrangler configuration. The D1 database ID is unchanged.
 
 Do not run the database schema again. The media table is created automatically when you upload the first file. Your existing `ADMIN_PASSWORD` secret remains managed in Cloudflare and is not included here.
 
 If a deployment does not start automatically, open the Cloudflare Worker, choose **Deployments**, and retry the latest build.
+
+## Rounds experience update
+
+The Rounds tab now shows a focused round selector; configuration appears only for the selected round. Round count stays under a collapsed schedule control. Team access is closed by default and must be granted for each round, either one team at a time or to all eligible teams. The server now closes the round at the configured deadline and rejects late answer submissions.
 
 ## Open the pages
 
 - Admin: `/admin`
 - Participants: `/participant`
 - Audience projector: `/audience`
+
+
