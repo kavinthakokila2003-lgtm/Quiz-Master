@@ -408,6 +408,26 @@
     window.addEventListener('hashchange', fromHash);
   }
 
+
+  // ---- Rounds tab must be a real button like the others --------------------------
+  // Some app.js versions draw the Rounds tab as a link (href="?tab=Rounds"), which reloads
+  // the page instead of switching tabs. Turn any such link back into a normal tab button.
+  const baseShell = window.shell;
+  if (typeof baseShell === 'function') {
+    window.shell = function () {
+      const html = baseShell.apply(this, arguments);
+      return String(html).replace(/<a class="nav([^"]*)" href="\?tab=([A-Za-z]+)">([\s\S]*?)<\/a>/g,
+        (m, cls, tab, inner) => `<button class="nav${cls}" onclick="go('${tab}')">${inner}</button>`);
+    };
+  }
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a.nav[href*="tab="]');
+    if (!a || role !== 'admin' || typeof go !== 'function') return;
+    e.preventDefault(); e.stopPropagation();
+    const tab = new URLSearchParams((a.getAttribute('href') || '').replace(/^\?/, '')).get('tab');
+    if (tab) go(tab);
+  }, true);
+
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
