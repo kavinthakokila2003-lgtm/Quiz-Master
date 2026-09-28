@@ -101,7 +101,7 @@
 
       /* Light shine sweep across primary buttons on hover — cheap, GPU-only */
       .btn{position:relative;overflow:hidden}
-      .btn:before{content:'';pointer-events:none;position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
+      .btn:before{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
       .btn:hover:before{transform:translateX(120%)}
 
       /* Sidebar nav icon: a touch more life on hover/active */
@@ -109,33 +109,7 @@
       .sidebar .nav.active .ico{animation:navPop .3s ease both}
       @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
 
-
-      /* ---------- Rounds tab: cleaner cards, no underlined text ---------- */
-      .round-card,.round-card *,.round-card summary{text-decoration:none!important}
-      .round-card h3,.round-card .round-title{letter-spacing:-.01em}
-      .round-card.round-card-modern{border:1px solid #e6e8f2}
-      .round-card .btn{border-radius:12px;font-weight:800}
-      .grant-all-bar{max-width:1020px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border-radius:16px;background:linear-gradient(120deg,#f4f2ff,#effbf7);border:1px solid #dcd8fb}
-      .grant-all-bar strong{display:block;font-size:14px;color:#232742}
-      .grant-all-bar span{font-size:12px;color:#5f6478}
-      .grant-all-bar .btn{white-space:nowrap}
-
-      /* ---------- Waiting lobby hero (participants + projector) ---------- */
-      .lobby-hero{pointer-events:none;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;max-width:820px;margin:0 auto 22px;padding:22px 26px;border-radius:24px;background:linear-gradient(135deg,#ffffff14,#ffffff06);border:1px solid #ffffff26;backdrop-filter:blur(8px);animation:hostReveal .6s cubic-bezier(.2,.8,.2,1) both}
-      .lobby-hero.light{background:linear-gradient(135deg,#fff,#f6f4ff);border-color:#dcd8fb;color:#232742}
-      .lobby-hero img,.lobby-hero .lobby-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #ffffffcc;box-shadow:0 0 0 4px #7566e94d,0 12px 28px #0003;animation:heroFloat 5s ease-in-out infinite}
-      .lobby-hero .lobby-avatar{display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,#7161f2,#2b9c86);color:#fff}
-      .lobby-hero small{display:block;font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.7;text-transform:uppercase}
-      .lobby-hero h2{margin:4px 0 2px;font-size:clamp(22px,4vw,38px);line-height:1.1}
-      .lobby-hero p{margin:0;font-size:14px;opacity:.85}
-      .lobby-hero .lobby-count{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:20px;background:#2b9c8626;color:#2b9c86;font-size:12px;font-weight:800}
-      .lobby-hero .lobby-you{display:inline-block;margin:10px 0 0 8px;padding:5px 12px;border-radius:20px;background:#7566e926;font-size:12px;font-weight:800}
-      body:has(#lobbyHero) .host-banner,body:has(#lobbyHero) .host-welcome{display:none}
-      @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-      @media(max-width:560px){.lobby-hero{grid-template-columns:1fr;justify-items:center;text-align:center}}
-
       @media(prefers-reduced-motion:reduce){
-        .lobby-hero,.lobby-hero img{animation:none!important}
         .enhance-overlay,.enhance-modal{transition:none!important}
         .host-banner,.host-welcome,.projector-host{animation:none!important}
         .team-login,.hero,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
@@ -206,25 +180,30 @@
   // during a live round, counts it, and — when they come back — blocks the screen
   // with a clear "return to the quiz" prompt instead of a passive toast.
   let tabSwitchCount = 0, wentAwayAt = 0;
-  function inLiveRound() { return role === 'participant' && S && S.phase === 'play'; }
+  function inLiveRound() { return role === 'participant' && S && S.phase === 'play' && (window.qmFocusProtectionActive ? window.qmFocusProtectionActive() : activeRound?.focusRequired !== false && !S.team?.focusExempt); }
   function armAntiCheat() {
     if (window.__qmAntiCheatBound) return;
     window.__qmAntiCheatBound = true;
     document.addEventListener('visibilitychange', () => {
       if (!inLiveRound()) return;
-      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); }
+      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); reportFocusEvent('tab-hidden'); }
       else if (wentAwayAt) { wentAwayAt = 0; showReturnPrompt(); }
     });
     document.addEventListener('fullscreenchange', () => {
-      if (inLiveRound() && !document.fullscreenElement) showReturnPrompt();
+      if (inLiveRound() && !document.fullscreenElement) { reportFocusEvent('fullscreen-exit'); showReturnPrompt(); }
     });
+  }
+  function reportFocusEvent(event) {
+    const token = window.TEAM_TOKEN || (typeof TEAM_TOKEN !== 'undefined' ? TEAM_TOKEN : '');
+    if (!token) return;
+    fetch('/api/team/focus-event', { method:'POST', headers:{'content-type':'application/json',authorization:`Bearer ${token}`}, body:JSON.stringify({event}) }).catch(()=>{});
   }
   function showReturnPrompt() {
     if (document.getElementById('anticheatPrompt')) return;
     const modal = document.createElement('div');
     modal.className = 'enhance-overlay';
     modal.id = 'anticheatPrompt';
-    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Stay on the quiz screen</h2><p>Leaving this tab or exiting fullscreen during a live round is recorded. Your timer keeps running while you're away, so return quickly.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
+    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Return to the quiz</h2><p>Your host can see this focus alert. The quiz timer continues while you are away. Websites cannot block other apps, so please follow your host’s rules.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
     document.body.append(modal);
     requestAnimationFrame(() => modal.classList.add('visible'));
     modal.querySelector('[data-role="back"]').addEventListener('click', async () => {
@@ -262,181 +241,12 @@
       })(startTime);
     });
   }
-
-  // ---- Admin: one-click access to every round for every team ----
-  window.grantAllRoundsAccess = function () {
-    if (!S.teams?.length) return toast('Add teams first.');
-    S.roundAccess = S.roundAccess || {};
-    const later = (S.rounds || []).filter(r => r.n > 1);
-    const already = later.every(r => S.teams.every(t => S.roundAccess[`${r.n}-${t.code}`]));
-    for (const r of later) for (const t of S.teams) {
-      const key = `${r.n}-${t.code}`;
-      if (already) delete S.roundAccess[key]; else S.roundAccess[key] = true;
-    }
-    save(); render();
-    toast(already ? 'Round passwords are required again.' : 'All teams can now enter every round.');
-  };
-
-  function decorateRounds() {
-    const grid = document.querySelector('.round-cards');
-    if (!grid || document.getElementById('grantAllBar') || role !== 'admin') return;
-    const later = (S.rounds || []).filter(r => r.n > 1);
-    const all = later.length && S.teams?.length && later.every(r => S.teams.every(t => S.roundAccess?.[`${r.n}-${t.code}`]));
-    const bar = document.createElement('div');
-    bar.id = 'grantAllBar'; bar.className = 'grant-all-bar';
-    bar.innerHTML = `<div><strong>Round access for all teams</strong><span>Let every team enter every round without a password. Locks still apply — you control the phones from each round card.</span></div><button class="btn${all ? ' light' : ''}" onclick="grantAllRoundsAccess()">${all ? 'Require passwords again' : 'Grant access to all rounds'}</button>`;
-    grid.parentNode.insertBefore(bar, grid);
-  }
-
-  // ---- Lobby hero: quiz name, host photo + name, team roster count ----
-  function lobbyHero(light, myTeam) {
-    const total = (S.teams || []).length, here = (S.teams || []).filter(t => t.online || t.present || t.checkedIn).length || total;
-    const photo = S.hostPhotoUrl ? `<img src="${esc(S.hostPhotoUrl)}" alt="Quiz master">` : `<div class="lobby-avatar">🎤</div>`;
-    return `<section class="lobby-hero${light ? ' light' : ''}" id="lobbyHero">${photo}<div><small>${esc(S.portalName || 'Welcome to')}</small><h2>${esc(S.quizName || 'QUIZ MASTER')}</h2><p>Hosted by <strong>${esc(S.hostName || 'your Quiz Master')}</strong></p><span class="lobby-count">${here} of ${total} teams in the lobby</span>${myTeam ? `<span class="lobby-you">You are ${esc(myTeam)}</span>` : ''}</div></section>`;
-  }
-  function decorateLobby() {
-    if (document.getElementById('lobbyHero')) return;
-    const grid = document.querySelector('.lobby-grid, .lobby-teams, .lobby-team')?.closest('section,div');
-    const first = document.querySelector('.lobby-team');
-    if (!first) return;
-    const container = first.parentElement;
-    const isParticipant = role === 'participant';
-    const me = isParticipant ? (S.teams || []).find(t => t.code === (window.TEAM_CODE || S.teamCode))?.name || S.teamName : '';
-    container.insertAdjacentHTML('beforebegin', lobbyHero(isParticipant, me));
-  }
-
-
-  // ---- On-screen diagnostics: open the page with ?debug=1 to see errors and what was tapped ----
-  if (/[?&]debug=1/.test(location.search)) {
-    const box = document.createElement('pre');
-    box.style.cssText = 'position:fixed;left:6px;right:6px;bottom:6px;max-height:38vh;overflow:auto;margin:0;padding:8px 10px;background:#111c;color:#7CFFB2;font:11px/1.35 monospace;z-index:2147483647;border-radius:8px;pointer-events:none;white-space:pre-wrap';
-    const lines = [];
-    const log = (t) => { lines.push(t); if (lines.length > 14) lines.shift(); box.textContent = lines.join('\n'); };
-    const attach = () => { if (!box.isConnected) document.body.append(box); };
-    window.addEventListener('error', (e) => log('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
-    window.addEventListener('unhandledrejection', (e) => log('PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)));
-    const desc = (el) => el ? (el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '')) : 'none';
-    ['pointerdown', 'click'].forEach((type) => document.addEventListener(type, (e) => {
-      const top = document.elementFromPoint(e.clientX, e.clientY);
-      log(type + ' target=' + desc(e.target) + ' top=' + desc(top) + (S ? ' tab=' + S.tab : ''));
-    }, true));
-    log('debug on — tap the Rounds tab');
-    attach(); document.addEventListener('DOMContentLoaded', attach);
-    setInterval(attach, 1500);
-  }
-
-
-  // ---- Rounds tab safety net: a bad piece of data must never freeze the tab ----
-  function showErrorBanner(msg) {
-    let b = document.getElementById('qmErrorBanner');
-    if (!b) {
-      b = document.createElement('div');
-      b.id = 'qmErrorBanner';
-      b.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:2147483000;padding:10px 14px;border-radius:12px;background:#fff1f2;border:1px solid #f3b6be;color:#8f2536;font:600 12px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0002';
-      b.addEventListener('click', () => b.remove());
-      document.body.append(b);
-    }
-    b.textContent = 'Rounds tab problem (tap to dismiss): ' + msg;
-  }
-  const baseRoundCard = window.roundCard;
-  if (typeof baseRoundCard === 'function') {
-    window.roundCard = function (r) {
-      try { return baseRoundCard(r); }
-      catch (e) {
-        console.error('roundCard failed', e);
-        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
-        const name = esc(r && r.name || ('Round ' + (r && r.n)));
-        const live = r && r.active;
-        const action = live && typeof toggleParticipantLock === 'function'
-          ? `<button class="btn tiny" onclick="toggleParticipantLock(${r.n})">${r.participantLocked ? 'Unlock participant screens' : 'Lock participant screens'}</button>`
-          : (r && !live && r.status !== 'Completed' && typeof startRound === 'function' ? `<button class="btn tiny" onclick="startRound(${r.n})">Start ${name}</button>` : '');
-        return `<article class="card round-card"><header><span class="eyebrow">ROUND ${r ? r.n : ''}</span><strong>${name}</strong></header><p style="font-size:12px;color:#5f6478">This round could not be drawn in full, but its main controls still work.</p>${action}</article>`;
-      }
-    };
-  }
-  const baseRoundsPage = window.roundsPage;
-  if (typeof baseRoundsPage === 'function') {
-    window.roundsPage = function () {
-      try { return baseRoundsPage.apply(this, arguments); }
-      catch (e) {
-        console.error('roundsPage failed', e);
-        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
-        return '<section class="card" style="padding:18px"><strong>Rounds could not be displayed.</strong><p style="font-size:12px;color:#5f6478">Reload the page. If this keeps happening, send the red message at the top of the screen.</p></section>';
-      }
-    };
-  }
-
-
-  // ---- Tab-tap rescue (admin) ----------------------------------------------------
-  // A normal tap is lost if the page redraws between finger-down and finger-up, or if
-  // something invisible sits on top of a tab. This looks at what is under the finger
-  // (even through overlays) and switches the tab itself if the normal click didn't.
-  // Also lets you open a tab directly: /admin#rounds
-  function navUnder(x, y) {
-    try {
-      return document.elementsFromPoint(x, y).map(el => el.closest && el.closest('.nav')).find(Boolean) || null;
-    } catch { return null; }
-  }
-  const navLabel = (n) => n ? (n.textContent || '').replace(/[^A-Za-z]/g, '').replace(/\d+$/, '') : '';
-  if (role === 'admin') {
-    let down = null;
-    document.addEventListener('pointerdown', (e) => {
-      const n = navUnder(e.clientX, e.clientY);
-      down = n ? { label: navLabel(n), x: e.clientX, y: e.clientY } : null;
-    }, true);
-    document.addEventListener('pointerup', (e) => {
-      if (!down) return;
-      const d = down; down = null;
-      if (Math.abs(e.clientX - d.x) > 14 || Math.abs(e.clientY - d.y) > 14) return;
-      const n = navUnder(e.clientX, e.clientY);
-      if (!n || navLabel(n) !== d.label) return;
-      setTimeout(() => {
-        if (S && S.tab !== d.label && typeof go === 'function') { try { go(d.label); } catch (err) { showErrorBanner(String(err && err.message || err)); } }
-      }, 120);
-    }, true);
-    const fromHash = () => {
-      const want = (location.hash || '').replace('#', '').toLowerCase();
-      if (!want) return;
-      const tries = setInterval(() => {
-        const match = ['Overview', 'Teams', 'Questions', 'Rounds', 'Projector', 'Settings'].find(t => t.toLowerCase() === want);
-        if (!match) return clearInterval(tries);
-        if (S && Array.isArray(S.rounds) && S.tab !== undefined && document.querySelector('.nav')) { clearInterval(tries); if (S.tab !== match) go(match); }
-      }, 300);
-      setTimeout(() => clearInterval(tries), 12000);
-    };
-    fromHash();
-    window.addEventListener('hashchange', fromHash);
-  }
-
-
-  // ---- Rounds tab must be a real button like the others --------------------------
-  // Some app.js versions draw the Rounds tab as a link (href="?tab=Rounds"), which reloads
-  // the page instead of switching tabs. Turn any such link back into a normal tab button.
-  const baseShell = window.shell;
-  if (typeof baseShell === 'function') {
-    window.shell = function () {
-      const html = baseShell.apply(this, arguments);
-      return String(html).replace(/<a class="nav([^"]*)" href="\?tab=([A-Za-z]+)">([\s\S]*?)<\/a>/g,
-        (m, cls, tab, inner) => `<button class="nav${cls}" onclick="go('${tab}')">${inner}</button>`);
-    };
-  }
-  document.addEventListener('click', (e) => {
-    const a = e.target.closest && e.target.closest('a.nav[href*="tab="]');
-    if (!a || role !== 'admin' || typeof go !== 'function') return;
-    e.preventDefault(); e.stopPropagation();
-    const tab = new URLSearchParams((a.getAttribute('href') || '').replace(/^\?/, '')).get('tab');
-    if (tab) go(tab);
-  }, true);
-
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
-      // The original render always runs first; nothing below may ever stop it or block clicks.
-      baseRenderForPolish.apply(this, arguments);
-      try { addPolishStyles(); } catch (e) { console.warn('polish styles', e); }
-      try { animateStatCounters(); } catch (e) { console.warn('polish counters', e); }
-      try { decorateRounds(); } catch (e) { console.warn('polish rounds', e); }
-      try { decorateLobby(); } catch (e) { console.warn('polish lobby', e); }
+      baseRenderForPolish();
+      addPolishStyles();
+      animateStatCounters();
     };
   }
 })();

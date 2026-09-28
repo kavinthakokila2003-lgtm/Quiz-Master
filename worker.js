@@ -1,380 +1,95 @@
-/* Quiz Master accessibility & polish pass. Loaded last — only additive/overriding, no data or API changes. */
-(() => {
-  function addPolishStyles() {
-    if (document.getElementById('qmPolishStyles')) return;
-    const style = document.createElement('style');
-    style.id = 'qmPolishStyles';
-    style.textContent = `
-      /* Darken secondary text/badge colors to meet WCAG AA contrast on their backgrounds */
-      :root{--muted:#5f6478}
-      .badge{color:#5c5f70}
-      .badge.lock{color:#8a5410}
-      .badge.live{color:#166840}
-      .side-label{color:#6d7181}
-      .access-state{color:#5c6175}
-      .access-state.locked{color:#9c3349}
-      .access-state.unlocked{color:#166840}
+const initial = () => ({
+  teams: [],
+  rounds: [{name:'Round 1',q:0,time:'10:00',status:'Locked',n:1},
+    {name:'Round 2',q:0,time:'10:00',status:'Locked',n:2},
+    {name:'Round 3',q:0,time:'10:00',status:'Locked',n:3},
+    {name:'Round 4',q:0,time:'10:00',status:'Locked',n:4}],
+  running:true, leaderboard:true, feedback:'after tournament', quizName:'QUIZ MASTER', portalName:'QUIZ MASTER', hostName:'Quiz Host', hostPhotoUrl:'', rulesText:'Work as a team. Keep your team and round passwords private. Answers cannot be changed after submission. Stay on the quiz page and follow the host’s instructions.', duration:10,
+  points:10, speedBonus:0, qcount:0, passwords:{}, roundAccess:{}, focusExemptions:{}, focusEvents:[], readyByRound:{}, verifiedRounds:{}, answers:[], questions:[], projectedQuestionId:null, phase:'admin', tab:'Overview'
+});
 
-      /* Clear, consistent keyboard focus highlight across every interactive control */
-      a:focus-visible,button:focus-visible,.btn:focus-visible,.nav:focus-visible,.tab:focus-visible,
-      .choice:focus-visible,.small-link:focus-visible,.switch:focus-visible,.step-dot:focus-visible,
-      details>summary:focus-visible,.round-card summary:focus-visible{
-        outline:3px solid #7566e9;outline-offset:2px;border-radius:8px;
-      }
-      input:focus-visible,textarea:focus-visible,select:focus-visible{
-        outline:3px solid #7566e955;
-      }
-
-      /* Toast is announced to screen readers */
-      .toast{role:status}
-
-      /* Small confirm dialog reused for lightweight confirmations */
-      .polish-modal p{margin:0 0 6px}
-
-      /* Modern primary-button treatment: richer gradient, deeper glow, crisp press feedback */
-      .btn:not(.light):not(.dark):not(.danger-button):not(.lock-action):not(.unlock-action){
-        background:linear-gradient(135deg,#7161f2,#5947d8);
-        box-shadow:0 8px 20px #5947d840;
-      }
-      .btn:not(.light):not(.dark):not(.danger-button):not(.lock-action):not(.unlock-action):hover{
-        background:linear-gradient(135deg,#7d6df5,#6350e6);
-        box-shadow:0 10px 26px #5947d855;
-      }
-
-      /* Host banner / welcome card: smooth entrance on the waiting screen and projector */
-      .host-banner,.host-welcome,.projector-host{animation:hostReveal .5s cubic-bezier(.2,.8,.2,1) both}
-      @keyframes hostReveal{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-
-      /* Mascot hint redesigned as a speech bubble sitting beside the owl, with little glasses */
-      .mascot-hint{position:relative;background:linear-gradient(110deg,#f8f6ff,#f0fbf8);overflow:visible}
-      .owl-mini{position:relative;display:inline-block}
-      .owl-mini:after{content:'👓';position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.62);pointer-events:none}
-      .mascot-bubble{position:relative;flex:1;padding:2px 4px}
-      .mascot-bubble:before{content:'';position:absolute;left:-9px;top:14px;border:7px solid transparent;border-right-color:#f8f6ff}
-
-      /* Anti-cheat / return-to-quiz overlay */
-      .anticheat-icon{background:linear-gradient(145deg,#fff0f1,#ffe6e9)!important;color:#bc3d51!important}
-      .anticheat-count{display:inline-block;margin-top:10px;padding:6px 11px;border-radius:20px;background:#fff1f2;color:#b5384d;font-size:11px;font-weight:800}
-
-      /* ---------- Advanced visual pass ---------- */
-
-      /* Gradient wordmark for extra polish on every header */
-      .brand b{background:linear-gradient(120deg,#7161f2,#2b9c86);-webkit-background-clip:text;background-clip:text;color:transparent}
-
-      /* Slow-moving aurora backdrop behind every sign-in / waiting screen */
-      .team-login{background:
-        radial-gradient(circle at 20% 20%,#c9beff55,transparent 45%),
-        radial-gradient(circle at 82% 75%,#9fe6cf55,transparent 42%),
-        radial-gradient(ellipse at 53% 30%,#efecff 0%,#f5f6f8 52%);
-        background-size:180% 180%,180% 180%,100% 100%;
-        animation:auroraDrift 16s ease-in-out infinite alternate}
-      @keyframes auroraDrift{from{background-position:0% 0%,100% 100%,0 0}to{background-position:30% 40%,60% 50%,0 0}}
-
-      /* Subtle shimmer across the admin hero banner */
-      .hero{background-size:220% 220%!important;animation:heroShimmer 9s ease infinite}
-      @keyframes heroShimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-
-      /* Staggered entrance for the main content blocks — reads as a "live" refresh */
-      .stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form{
-        animation:qmRise .4s cubic-bezier(.2,.75,.2,1) both;
-      }
-      .stats>.stat:nth-child(1),.round-cards>.round-card:nth-child(1){animation-delay:0ms}
-      .stats>.stat:nth-child(2),.round-cards>.round-card:nth-child(2){animation-delay:60ms}
-      .stats>.stat:nth-child(3),.round-cards>.round-card:nth-child(3){animation-delay:120ms}
-      .stats>.stat:nth-child(4),.round-cards>.round-card:nth-child(4){animation-delay:180ms}
-      .round-cards>.round-card:nth-child(5){animation-delay:240ms}
-      .round-cards>.round-card:nth-child(6){animation-delay:300ms}
-      .round-cards>.round-card:nth-child(n+7){animation-delay:340ms}
-      @keyframes qmRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-      /* Podium glow for the top three leaderboard rows, on admin and projector alike */
-      .leader-row:nth-child(1){background:linear-gradient(90deg,#fff7e0,transparent)}
-      .leader-row:nth-child(1) .rank{color:#b8860b;font-size:15px;animation:podiumPulse 2.4s ease-in-out infinite}
-      .leader-row:nth-child(2){background:linear-gradient(90deg,#f2f3f7,transparent)}
-      .leader-row:nth-child(2) .rank{color:#7a7f92}
-      .leader-row:nth-child(3){background:linear-gradient(90deg,#fdece1,transparent)}
-      .leader-row:nth-child(3) .rank{color:#a6602c}
-      .audience-board .leader-row:nth-child(1){background:linear-gradient(90deg,#3a331f,transparent)}
-      .audience-board .leader-row:nth-child(2){background:linear-gradient(90deg,#2c2e3d,transparent)}
-      .audience-board .leader-row:nth-child(3){background:linear-gradient(90deg,#332720,transparent)}
-      @keyframes podiumPulse{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 10px #e8b93d99}}
-
-      /* Light shine sweep across primary buttons on hover — cheap, GPU-only */
-      .btn{position:relative;overflow:hidden}
-      .btn:before{content:'';pointer-events:none;position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff45 48%,transparent 66%);transform:translateX(-120%);transition:transform .55s ease}
-      .btn:hover:before{transform:translateX(120%)}
-
-      /* Sidebar nav icon: a touch more life on hover/active */
-      .sidebar .nav:hover .ico{transform:translateY(-1px) rotate(-4deg)}
-      .sidebar .nav.active .ico{animation:navPop .3s ease both}
-      @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
-
-
-      /* ---------- Rounds tab: cleaner cards, no underlined text ---------- */
-      .round-card,.round-card *,.round-card summary{text-decoration:none!important}
-      .round-card h3,.round-card .round-title{letter-spacing:-.01em}
-      .round-card.round-card-modern{border:1px solid #e6e8f2}
-      .round-card .btn{border-radius:12px;font-weight:800}
-      .grant-all-bar{max-width:1020px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border-radius:16px;background:linear-gradient(120deg,#f4f2ff,#effbf7);border:1px solid #dcd8fb}
-      .grant-all-bar strong{display:block;font-size:14px;color:#232742}
-      .grant-all-bar span{font-size:12px;color:#5f6478}
-      .grant-all-bar .btn{white-space:nowrap}
-
-      /* ---------- Waiting lobby hero (participants + projector) ---------- */
-      .lobby-hero{pointer-events:none;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;max-width:820px;margin:0 auto 22px;padding:22px 26px;border-radius:24px;background:linear-gradient(135deg,#ffffff14,#ffffff06);border:1px solid #ffffff26;backdrop-filter:blur(8px);animation:hostReveal .6s cubic-bezier(.2,.8,.2,1) both}
-      .lobby-hero.light{background:linear-gradient(135deg,#fff,#f6f4ff);border-color:#dcd8fb;color:#232742}
-      .lobby-hero img,.lobby-hero .lobby-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #ffffffcc;box-shadow:0 0 0 4px #7566e94d,0 12px 28px #0003;animation:heroFloat 5s ease-in-out infinite}
-      .lobby-hero .lobby-avatar{display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,#7161f2,#2b9c86);color:#fff}
-      .lobby-hero small{display:block;font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.7;text-transform:uppercase}
-      .lobby-hero h2{margin:4px 0 2px;font-size:clamp(22px,4vw,38px);line-height:1.1}
-      .lobby-hero p{margin:0;font-size:14px;opacity:.85}
-      .lobby-hero .lobby-count{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:20px;background:#2b9c8626;color:#2b9c86;font-size:12px;font-weight:800}
-      .lobby-hero .lobby-you{display:inline-block;margin:10px 0 0 8px;padding:5px 12px;border-radius:20px;background:#7566e926;font-size:12px;font-weight:800}
-      body:has(#lobbyHero) .host-banner,body:has(#lobbyHero) .host-welcome{display:none}
-      @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-      @media(max-width:560px){.lobby-hero{grid-template-columns:1fr;justify-items:center;text-align:center}}
-
-      @media(prefers-reduced-motion:reduce){
-        .lobby-hero,.lobby-hero img{animation:none!important}
-        .enhance-overlay,.enhance-modal{transition:none!important}
-        .host-banner,.host-welcome,.projector-host{animation:none!important}
-        .team-login,.hero,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
-        .leader-row:nth-child(1) .rank,.sidebar .nav.active .ico,.btn:before{animation:none!important;transition:none!important}
-      }
-    `;
-    document.head.append(style);
+const json = (data, status=200, headers={}) => new Response(JSON.stringify(data), {status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers}});
+const fail = (status,error) => json({error},status);
+const csvCell = value => `"${String(value??'').replaceAll('"','""').replace(/[\r\n]/g,' ')}"`;
+async function getState(env){
+  await env.DB.prepare('INSERT OR IGNORE INTO app_state (id, body, version) VALUES (1, ?, 1)').bind(JSON.stringify(initial())).run();
+  const row=await env.DB.prepare('SELECT body, version FROM app_state WHERE id=1').first();
+  return {state:JSON.parse(row.body),version:row.version};
+}
+async function changeState(env, change){
+  for(let i=0;i<8;i++){
+    const {state,version}=await getState(env);const result=await change(state);
+    const saved=await env.DB.prepare('UPDATE app_state SET body=?, version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),version).run();
+    if(saved.meta.changes===1)return result;
   }
-  addPolishStyles();
-  document.addEventListener('DOMContentLoaded', addPolishStyles, { once: true });
+  throw new Error('The quiz is busy. Please try again.');
+}
+function normalizedQuestions(s){return (s.questions||[]).map((q,i)=>{const round=Number(q.round||String(q[0]||'').match(/\d+/)?.[0]||1),cfg=(s.rounds||[]).find(r=>r.n===round);return {id:String(q.id||`r${round}-q${i+1}`),round,text:q.text||q[1]||'',options:Array.isArray(q.options)?q.options:(Array.isArray(q)?q.slice(4,8).filter(Boolean):[]),answer:q.answer||q[2]||'',points:Number(q.points??q[4]??cfg?.points??s.points??10),type:q.type||((q.options||[]).length?'multiple-choice':'typed'),mediaUrl:q.mediaUrl||'',mediaType:q.mediaType||''}})}
+function isComplete(s){const total=(s.rounds||[]).length;return total>0&&(s.teams||[]).length>0&&s.teams.every(t=>Number((t.progress||'0/0').split('/')[0])>=total)}
+function readyCount(s,n){const set=new Set((s.readyByRound||{})[String(n)]||[]);return (s.teams||[]).filter(t=>set.has(t.code)).length}
+function safeState(s){const done=isComplete(s),qs=normalizedQuestions(s),teams=s.teams||[],active=(s.rounds||[]).find(r=>r.active),ready=active?readyCount(s,active.n):0,allReady=!!active&&teams.length>0&&ready>=teams.length,projected=qs.find(q=>q.id===String(s.projectedQuestionId)),canShow=!!projected&&!!active&&active.n===projected.round&&allReady&&!done&&!active.participantLocked,now=Date.now(),joined=teams.filter(t=>Number(s.presence?.[t.code]||0)>now-45000);return {quizName:s.quizName,portalName:s.portalName||s.quizName||'QUIZ MASTER',hostName:s.hostName||'Quiz Host',hostPhotoUrl:s.hostPhotoUrl||'',rulesText:s.rulesText||'Work as a team. Keep your passwords private. Submitted answers cannot be changed.',running:s.running,leaderboard:s.leaderboard,rounds:(s.rounds||[]).map(({name,q,time,status,n,active,ended,deadlineAt,passwordRequired,participantLocked,remainingMs,focusRequired})=>({name,q,time,status,n,active,ended,deadlineAt,passwordRequired:passwordRequired!==false,participantLocked:!!participantLocked,remainingMs,focusRequired:focusRequired!==false,readyCount:readyCount(s,n),allReady:teams.length>0&&readyCount(s,n)>=teams.length})),teams:teams.map(({name,points,progress,status,logo,logoColor,code})=>({name,points,progress,status,logo,logoColor,joined:Number(s.presence?.[code]||0)>now-45000})),joinedTeams:joined.map(({name,logo,logoColor})=>({name,logo,logoColor})),allTeamsComplete:done,allTeamsReady:allReady,readyCount:ready,teamCount:teams.length,projectedQuestion:canShow?{id:projected.id,round:projected.round,text:projected.text,options:projected.options,answer:null,points:projected.points,mediaUrl:projected.mediaUrl,mediaType:projected.mediaType}:null,finalQuestions:done?qs.map(({id,round,text,options,answer,points,mediaUrl,mediaType})=>({id,round,text,options,answer,points,mediaUrl,mediaType})):[],updatedAt:Date.now()};}
+function expireRound(s,r){if(r?.active&&r.deadlineAt&&Date.now()>=r.deadlineAt){r.active=false;r.ended=true;r.status='Completed';return true}return false}
+function durationMs(r){const p=String(r?.time||'10:00').split(':').map(Number);return ((p.length>1?(p[0]*60+p[1]):p[0]*60)||600)*1000}
+async function syncExpired(env){const {state}=await getState(env);if(!(state.rounds||[]).some(r=>r.active&&r.deadlineAt&&Date.now()>=r.deadlineAt))return;await changeState(env,s=>{for(const r of s.rounds||[]){if(r.active&&r.deadlineAt&&Date.now()>=r.deadlineAt){r.active=false;r.ended=true;r.status='Completed';for(const t of s.teams||[]){const p=Number((t.progress||'0/0').split('/')[0])||0;if(p<r.n){t.progress=`${r.n}/${s.rounds.length}`;t.status=r.n>=s.rounds.length?'Complete':'Waiting for host'}}}}return null})}
+async function token(req,env,kind){const value=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');if(!value)return null;const row=await env.DB.prepare('SELECT kind, team_code, expires FROM sessions WHERE token=?').bind(value).first();if(!row||row.kind!==kind||row.expires<Date.now())return null;return {value,code:row.team_code};}
+function makeToken(){const b=new Uint8Array(32);crypto.getRandomValues(b);return [...b].map(x=>x.toString(16).padStart(2,'0')).join('');}
+async function body(req){try{return await req.json()}catch{return null}}
+async function handleApi(req,env,url){
+ const p=url.pathname,m=req.method;
+ if(m==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'Content-Type,Authorization','access-control-allow-methods':'GET,POST,PUT,OPTIONS'}});
+ if(m==='POST'&&p==='/api/admin/login'){
+   const b=await body(req);if(!b||typeof b.password!=='string'||b.password!==env.ADMIN_PASSWORD)return fail(401,'Invalid admin password');
+   const t=makeToken();await env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(Date.now()).run();await env.DB.prepare('INSERT INTO sessions(token,kind,team_code,expires) VALUES(?,?,?,?)').bind(t,'admin','',Date.now()+12*60*60*1000).run();return json({token:t,expiresIn:43200});
+ }
+ if(m==='POST'&&p==='/api/team/login'){
+   const b=await body(req),code=String(b?.code||'').trim().toUpperCase(),{state}=await getState(env),team=(state.teams||[]).find(t=>t.code===code);if(!team)return fail(401,'Team code not found');
+   const t=makeToken();await env.DB.prepare('INSERT INTO sessions(token,kind,team_code,expires) VALUES(?,?,?,?)').bind(t,'team',code,Date.now()+24*60*60*1000).run();await changeState(env,s=>{s.presence=s.presence||{};s.presence[code]=Date.now();return null});const fresh=(await getState(env)).state,active=(fresh.rounds||[]).find(r=>r.active),focusExempt=!!active&&!!fresh.focusExemptions?.[`${active.n}-${code}`];return json({token:t,team:{name:team.name,code:team.code,progress:team.progress,logo:team.logo,logoColor:team.logoColor,focusExempt},state:safeState(fresh)});
+ }
+ if(m==='GET'&&p==='/api/public/state'){await syncExpired(env);return json(safeState((await getState(env)).state));}
+ if(m==='POST'&&p==='/api/admin/media'){
+   if(!await token(req,env,'admin'))return fail(401,'Admin login required');
+   const form=await req.formData(),file=form.get('file'),allowed=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];if(!file||typeof file.arrayBuffer!=='function')return fail(400,'Choose an image or video first');if(!allowed.includes(file.type))return fail(415,'Use JPG, PNG, WEBP, GIF, MP4 or WEBM');if(file.size>1800000)return fail(413,'For free Cloudflare storage, uploads must be 1.8 MB or smaller. Add a video link for larger clips.');
+   await env.DB.prepare('CREATE TABLE IF NOT EXISTS question_media (id TEXT PRIMARY KEY, mime_type TEXT NOT NULL, data BLOB NOT NULL, created_at TEXT NOT NULL)').run();const id=crypto.randomUUID(),data=new Uint8Array(await file.arrayBuffer());await env.DB.prepare('INSERT INTO question_media (id,mime_type,data,created_at) VALUES(?,?,?,?)').bind(id,file.type,data,new Date().toISOString()).run();return json({url:`/media/${id}`,type:file.type,name:file.name});
+ }
+ if(m==='POST'&&p==='/api/team/ready'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req),n=Number(b?.round);
+   try{const result=await changeState(env,s=>{const r=s.rounds.find(x=>x.n===n),team=s.teams.find(x=>x.code===ses.code),progress=Number((team?.progress||'0/0').split('/')[0])||0;if(!s.running||!r?.active||r.participantLocked||progress!==n-1)throw Object.assign(Error(r?.participantLocked?'The host has locked participant screens':'This round is not open for your team'),{status:409});s.readyByRound=s.readyByRound||{};const ready=s.readyByRound[String(n)]||[];if(!ready.includes(ses.code))ready.push(ses.code);s.readyByRound[String(n)]=ready;return {ok:true,ready:true,allReady:s.teams.length>0&&readyCount(s,n)>=s.teams.length,readyCount:readyCount(s,n),teamCount:s.teams.length}});return json(result)}catch(e){if(e.status)return fail(e.status,e.message);throw e}
+ }
+ if(m==='POST'&&p==='/api/team/focus-event'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req),event=['tab-hidden','fullscreen-exit'].includes(String(b?.event))?String(b.event):'';if(!event)return fail(400,'Unknown focus event');
+   const result=await changeState(env,s=>{const r=(s.rounds||[]).find(x=>x.active),key=r?`${r.n}-${ses.code}`:'',exempt=!!key&&!!s.focusExemptions?.[key];if(!r||r.focusRequired===false||exempt)return {ok:true,recorded:false};s.focusEvents=Array.isArray(s.focusEvents)?s.focusEvents:[];const now=Date.now(),recent=s.focusEvents.some(x=>x.teamCode===ses.code&&x.round===r.n&&x.event===event&&now-Number(x.at)<5000);if(!recent)s.focusEvents.push({teamCode:ses.code,round:r.n,event,at:now});s.focusEvents=s.focusEvents.slice(-500);return {ok:true,recorded:!recent}});return json(result);
+ }
+ if(m==='GET'&&p==='/api/admin/state'){if(!await token(req,env,'admin'))return fail(401,'Admin login required');await syncExpired(env);return json((await getState(env)).state)}
+ if(m==='PUT'&&p==='/api/admin/state'){
+   if(!await token(req,env,'admin'))return fail(401,'Admin login required');const s=await body(req);if(!s||!Array.isArray(s.teams)||!Array.isArray(s.rounds))return fail(400,'Invalid tournament state');
+   await changeState(env,old=>{const roundCountChanged=(old.rounds||[]).length!==s.rounds.length;for(const team of s.teams){const saved=old.teams.find(t=>t.code===team.code);if(saved){team.points=Number(saved.points)||0;team.speed=Number(saved.speed)||0;if(!roundCountChanged){team.progress=saved.progress;team.status=saved.status}}}const before=(old.rounds||[]).find(r=>r.active),after=(s.rounds||[]).find(r=>r.active);s.answers=old.answers||[];if(before?.n!==after?.n){s.readyByRound={...(old.readyByRound||{})};if(after)s.readyByRound[String(after.n)]=[];s.verifiedRounds=Object.fromEntries(Object.entries(old.verifiedRounds||{}).filter(([key])=>!after||!key.startsWith(`${after.n}-`)))}else{s.readyByRound=old.readyByRound||s.readyByRound||{};s.verifiedRounds=old.verifiedRounds||s.verifiedRounds||{}}Object.assign(old,s);return null});return json({ok:true,updatedAt:Date.now()});
+ }
+ if(m==='POST'&&p==='/api/team/verify-round'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Enter your team login code first');const b=await body(req),n=Number(b?.round);
+   try{const result=await changeState(env,s=>{const r=(s.rounds||[]).find(x=>x.n===n),team=(s.teams||[]).find(t=>t.code===ses.code),progress=Number((team?.progress||'0/0').split('/')[0])||0,direct=!!s.roundAccess?.[`${n}-${ses.code}`]||r?.passwordRequired===false;if(expireRound(s,r))throw Object.assign(Error('This round is closed'),{status:409});if(!s.running||!r?.active||r.participantLocked)throw Object.assign(Error(r?.participantLocked?'The host has locked participant screens':'This round is not open'),{status:409});if(!team||progress!==n-1)throw Object.assign(Error('Finish the previous round before starting this one'),{status:409});if(!(s.readyByRound?.[String(n)]||[]).includes(ses.code))throw Object.assign(Error('Mark your team ready before entering'),{status:409});const expected=s.passwords?.[`${n}-${ses.code}`];if(n>1&&!direct&&(!expected||String(b?.password||'').trim().toUpperCase()!==expected))throw Object.assign(Error('Incorrect round password'),{status:401});const questions=normalizedQuestions(s).filter(q=>q.round===n);if(!questions.length)throw Object.assign(Error('The host has not added questions for this round yet'),{status:409});s.verifiedRounds=s.verifiedRounds||{};s.verifiedRounds[`${n}-${ses.code}`]=true;return {round:{name:r.name,n:r.n,questions:questions.length,time:r.time,deadlineAt:r.deadlineAt,focusRequired:r.focusRequired!==false},questions:questions.map(({id,text,options,points,type,mediaUrl,mediaType})=>({id,text,options,points,type,mediaUrl,mediaType}))}});return json({ok:true,...result})}catch(e){if(e.status)return fail(e.status,e.message);throw e}
+ }
+ if(m==='GET'&&p==='/api/team/state'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');await syncExpired(env);let {state:s}=await getState(env);if(Date.now()-Number(s.presence?.[ses.code]||0)>10000){await changeState(env,x=>{x.presence=x.presence||{};x.presence[ses.code]=Date.now();return null});({state:s}=await getState(env))}const t=s.teams.find(x=>x.code===ses.code),rows=(s.answers||[]).filter(a=>a.team_code===ses.code).sort((a,b)=>a.round_no-b.round_no||a.question_id.localeCompare(b.question_id)),progress=Number((t?.progress||'0/0').split('/')[0])||0,reveal=progress>=s.rounds.length,active=(s.rounds||[]).find(r=>r.active),readyRound=active&&(s.readyByRound?.[String(active.n)]||[]).includes(ses.code)?active.n:null,needsRoundPassword=!!active&&active.n>1&&active.passwordRequired!==false&&!s.roundAccess?.[`${active.n}-${ses.code}`],focusExempt=!!active&&!!s.focusExemptions?.[`${active.n}-${ses.code}`];return json({team:t?{name:t.name,code:t.code,points:t.points,progress:t.progress,status:t.status,logo:t.logo,logoColor:t.logoColor,readyRound,needsRoundPassword,focusExempt}:null,state:safeState(s),answers:rows.map(({correct_answer,...a})=>{const roundDone=progress>=Number(a.round_no);return {...a,correct:roundDone?a.correct:null,...(reveal?{correct_answer}: {})}}),revealAnswers:reveal});
+ }
+ if(m==='POST'&&p==='/api/team/submit-round'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req),n=Number(b?.round),submitted=Array.isArray(b?.answers)?b.answers:[];if(submitted.length>100)return fail(400,'Too many answers');
+   try{const result=await changeState(env,s=>{const r=s.rounds.find(x=>x.n===n),team=s.teams.find(x=>x.code===ses.code);if(!s.running||!r||!r.active||r.participantLocked||r.deadlineAt&&Date.now()>=r.deadlineAt)throw Object.assign(Error(r?.participantLocked?'The host has locked participant screens':'Round is closed'),{status:409});if(!team)throw Object.assign(Error('Team not found'),{status:404});const progress=Number((team.progress||'0/0').split('/')[0])||0;if(progress!==n-1)throw Object.assign(Error('This round is already locked or not yet available'),{status:409});if(!s.verifiedRounds?.[`${n}-${ses.code}`])throw Object.assign(Error('Enter this round through the team lobby first'),{status:403});const qs=normalizedQuestions(s).filter(q=>q.round===n);if(!qs.length)throw Object.assign(Error('The host has not added questions for this round yet'),{status:409});s.answers=s.answers||[];const byId=new Map(submitted.map(a=>[String(a.questionId),a]));let score=0,elapsed=0;for(const q of qs){const a=byId.get(q.id)||{},answer=String(a.answer||'').slice(0,2000),ok=answer.trim().toLowerCase()===String(q.answer).trim().toLowerCase(),points=ok?Number(q.points??s.points??10):0,ms=Math.max(0,Number(a.elapsedMs)||0);s.answers.push({team_code:ses.code,round_no:n,question_id:q.id,question_text:q.text,answer,correct:ok,correct_answer:q.answer,points,elapsed_ms:ms,submitted_at:new Date().toISOString()});score+=points;elapsed+=ms}s.speedBonus=Number(s.speedBonus)||0;team.points=Number(team.points||0)+score;team.speed=Number(team.speed||0)+elapsed;team.progress=`${Math.min(s.rounds.length,n)}/${s.rounds.length}`;team.status=n>=s.rounds.length?'Complete':'Waiting for host';if(s.teams.every(t=>Number((t.progress||'0/0').split('/')[0])>=n)){r.active=false;r.ended=true;r.status='Completed'}return {ok:true,score,locked:true,progress:team.progress,revealAnswers:team.progress===`${s.rounds.length}/${s.rounds.length}`}});return json(result)}catch(e){if(e.status)return fail(e.status,e.message);throw e}
+ }
+ if(m==='POST'&&p==='/api/team/answers'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req);if(!Array.isArray(b?.answers)||b.answers.length>100)return fail(400,'Invalid answer submission');
+   const result=await changeState(env,s=>{const r=s.rounds.find(x=>x.n===Number(b.round));if(!s.running||!r||!r.active||r.participantLocked)throw Object.assign(Error(r?.participantLocked?'The host has locked participant screens':'Round is closed'),{status:409});s.answers=s.answers||[];let score=0,elapsed=0;for(const a of b.answers){if(s.answers.some(x=>x.team_code===ses.code&&x.round_no===r.n&&x.question_id===String(a.questionId)))continue;const q=(s.questions||[]).find(x=>String(x.id)===String(a.questionId)||String(x[0])===String(a.questionId)),expected=q?.answer||q?.[2]||'',ok=String(a.answer||'').trim().toLowerCase()===String(expected).trim().toLowerCase(),pts=ok?Number(q?.points||q?.[4]||s.points||10):0,ms=Math.max(0,Number(a.elapsedMs)||0);s.answers.push({team_code:ses.code,round_no:r.n,question_id:String(a.questionId),answer:String(a.answer||'').slice(0,2000),correct:ok,points:pts,elapsed_ms:ms,submitted_at:new Date().toISOString()});score+=pts;elapsed+=ms}return {ok:true,score,elapsedMs:elapsed,locked:true}});return json(result);
+ }
+ if(m==='POST'&&p==='/api/team/finish-round'){
+   const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req),n=Number(b?.round);
+   try{const result=await changeState(env,s=>{const r=s.rounds.find(x=>x.n===n),team=s.teams.find(x=>x.code===ses.code);if(expireRound(s,r))throw Object.assign(Error('Round is closed'),{status:409});if(!s.running||!r||!r.active||r.participantLocked)throw Object.assign(Error(r?.participantLocked?'The host has locked participant screens':'Round is closed'),{status:409});if(!team)throw Object.assign(Error('Team not found'),{status:404});const count=Number((team.progress||'0/4').split('/')[0])||0;if(count>=r.n)throw Object.assign(Error('This round is already locked'),{status:409});let score=0;s.answers=s.answers||[];const answer=b.answer===undefined?'':String(b.answer).slice(0,2000),q=(s.questions||[]).find(x=>Number(x.round||String(x[0]||'').match(/\d+/)?.[0])===r.n);if(q){const id=String(q.id||1);if(s.answers.some(x=>x.team_code===ses.code&&x.round_no===r.n&&x.question_id===id))throw Object.assign(Error('Your answer is already locked'),{status:409});const ok=answer.trim().toLowerCase()===String(q.answer||q[2]||'').trim().toLowerCase();score=ok?Number(q.points||q[4]||s.points||10):0;s.answers.push({team_code:ses.code,round_no:r.n,question_id:id,answer,correct:ok,points:score,elapsed_ms:Math.max(0,Number(b.elapsedMs)||0),submitted_at:new Date().toISOString()})}team.points=Number(team.points||0)+score;const total=s.rounds.length;team.progress=`${Math.min(total,count+1)}/${total}`;team.status=count+1>=total?'Complete':'Waiting for host';return {ok:true,score,locked:true,progress:team.progress}});return json(result)}catch(e){if(e.status)return fail(e.status,e.message);throw e}
+ }
+ if(m==='GET'&&p==='/api/admin/export.csv'){
+   if(!await token(req,env,'admin'))return fail(401,'Admin login required');const {state:s}=await getState(env),rows=(s.answers||[]).sort((a,b)=>a.round_no-b.round_no||a.team_code.localeCompare(b.team_code)||a.question_id.localeCompare(b.question_id)).map(a=>({...a,team:s.teams.find(t=>t.code===a.team_code)?.name||s.archivedTeams?.find(t=>t.code===a.team_code)?.name||''})),head='Team,Team login code,Round,Question ID,Question,Submitted answer,Correct answer,Correct,Points,Time (ms),Submitted at';return new Response([head,...rows.map(x=>[x.team,x.team_code,x.round_no,x.question_id,x.question_text,x.answer,x.correct_answer,x.correct?'Yes':'No',x.points,x.elapsed_ms,x.submitted_at].map(csvCell).join(','))].join('\r\n'),{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="quiz-master-answers.csv"','cache-control':'no-store'}});
+ }
+ return fail(404,'Not found');
+}
 
-  // Make toast announcements accessible to screen readers without changing its visual behavior.
-  const baseToast = window.toast;
-  if (typeof baseToast === 'function') {
-    window.toast = function (message) {
-      baseToast(message);
-      const el = document.querySelector('.toast');
-      if (el) { el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); }
-    };
-  }
-
-  // Small in-site confirm dialog, styled like the existing modals, for actions that had none.
-  function showPolishConfirm({ icon = '↻', eyebrow = '', title, body, confirmLabel = 'Continue', cancelLabel = 'Cancel', danger = false, onConfirm }) {
-    document.getElementById('polishConfirm')?.remove();
-    const modal = document.createElement('div');
-    modal.className = 'enhance-overlay';
-    modal.id = 'polishConfirm';
-    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon${danger ? ' danger-icon' : ''}">${icon}</div>${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ''}<h2>${title}</h2><p>${body}</p><div class="modal-actions"><button class="btn light" data-role="cancel">${cancelLabel}</button><button class="btn${danger ? ' danger-button' : ''}" data-role="confirm">${confirmLabel}</button></div></section>`;
-    document.body.append(modal);
-    requestAnimationFrame(() => modal.classList.add('visible'));
-    const close = () => { modal.classList.remove('visible'); setTimeout(() => modal.remove(), 180); };
-    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-    modal.querySelector('[data-role="cancel"]').addEventListener('click', close);
-    modal.querySelector('[data-role="confirm"]').addEventListener('click', () => { close(); onConfirm(); });
-    modal.querySelector('[data-role="confirm"]').focus();
-  }
-
-  // Resetting a team's login code immediately invalidates the old one — confirm before doing it.
-  const baseResetTeamCode = window.resetTeamCode;
-  if (typeof baseResetTeamCode === 'function') {
-    window.resetTeamCode = function (old) {
-      const team = (S.teams || []).find(t => t.code === old);
-      if (!team) return;
-      showPolishConfirm({
-        icon: '↻',
-        eyebrow: 'TEAM ACCESS',
-        title: `Reset login for ${esc(team.name)}?`,
-        body: `Their current login password stops working immediately. Share the new one with the team right away.`,
-        confirmLabel: 'Reset login',
-        onConfirm: () => baseResetTeamCode(old)
-      });
-    };
-  }
-
-  // Redesign the mascot hint as a speech bubble beside the owl (kept functionally identical: opens the scorecard).
-  if (typeof window.roundFeedback === 'function') {
-    window.roundFeedback = function () {
-      const rows = (S.answers || []).filter(a => a.correct !== null && a.correct !== undefined);
-      if (!rows.length) return '';
-      const right = rows.filter(a => a.correct).length, wrong = rows.length - right;
-      return `<button class="mascot-hint" onclick="openAnswerStatus()"><span class="owl-mini">🦉</span><span class="mascot-bubble"><strong>Click here to check your answers status</strong><small>${right} correct · ${wrong} incorrect</small></span><i>Open scorecard →</i></button>`;
-    };
-  }
-
-  // --- Focus / anti-cheat mode -------------------------------------------------
-  // True tab-blocking isn't possible from a web page, so this does the next best
-  // thing: it notices when a participant leaves the quiz tab or drops fullscreen
-  // during a live round, counts it, and — when they come back — blocks the screen
-  // with a clear "return to the quiz" prompt instead of a passive toast.
-  let tabSwitchCount = 0, wentAwayAt = 0;
-  function inLiveRound() { return role === 'participant' && S && S.phase === 'play'; }
-  function armAntiCheat() {
-    if (window.__qmAntiCheatBound) return;
-    window.__qmAntiCheatBound = true;
-    document.addEventListener('visibilitychange', () => {
-      if (!inLiveRound()) return;
-      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); }
-      else if (wentAwayAt) { wentAwayAt = 0; showReturnPrompt(); }
-    });
-    document.addEventListener('fullscreenchange', () => {
-      if (inLiveRound() && !document.fullscreenElement) showReturnPrompt();
-    });
-  }
-  function showReturnPrompt() {
-    if (document.getElementById('anticheatPrompt')) return;
-    const modal = document.createElement('div');
-    modal.className = 'enhance-overlay';
-    modal.id = 'anticheatPrompt';
-    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Stay on the quiz screen</h2><p>Leaving this tab or exiting fullscreen during a live round is recorded. Your timer keeps running while you're away, so return quickly.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
-    document.body.append(modal);
-    requestAnimationFrame(() => modal.classList.add('visible'));
-    modal.querySelector('[data-role="back"]').addEventListener('click', async () => {
-      modal.classList.remove('visible');
-      setTimeout(() => modal.remove(), 180);
-      try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.(); } catch {}
-    });
-  }
-  armAntiCheat();
-
-  // Animate admin stat numbers counting up whenever their value actually changes
-  // (skipped entirely under reduced motion; a no-op the rest of the time it runs
-  // since most polls don't change the numbers).
-  const lastStatValues = new Map();
-  function animateStatCounters() {
-    if (role !== 'admin' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    document.querySelectorAll('.stat').forEach((card) => {
-      const label = card.querySelector('.stat-label')?.textContent || '';
-      const valueEl = card.querySelector('.stat-value');
-      if (!valueEl) return;
-      const raw = valueEl.textContent;
-      const match = raw.match(/\d+/);
-      if (!match) return;
-      const target = Number(match[0]);
-      const prev = lastStatValues.has(label) ? lastStatValues.get(label) : target;
-      lastStatValues.set(label, target);
-      if (prev === target) return;
-      const prefix = raw.slice(0, match.index), suffix = raw.slice(match.index + match[0].length);
-      const duration = 500, startTime = performance.now();
-      (function step(now) {
-        const t = Math.min(1, (now - startTime) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        valueEl.textContent = `${prefix}${Math.round(prev + (target - prev) * eased)}${suffix}`;
-        if (t < 1) requestAnimationFrame(step); else valueEl.textContent = raw;
-      })(startTime);
-    });
-  }
-
-  // ---- Admin: one-click access to every round for every team ----
-  window.grantAllRoundsAccess = function () {
-    if (!S.teams?.length) return toast('Add teams first.');
-    S.roundAccess = S.roundAccess || {};
-    const later = (S.rounds || []).filter(r => r.n > 1);
-    const already = later.every(r => S.teams.every(t => S.roundAccess[`${r.n}-${t.code}`]));
-    for (const r of later) for (const t of S.teams) {
-      const key = `${r.n}-${t.code}`;
-      if (already) delete S.roundAccess[key]; else S.roundAccess[key] = true;
-    }
-    save(); render();
-    toast(already ? 'Round passwords are required again.' : 'All teams can now enter every round.');
-  };
-
-  function decorateRounds() {
-    const grid = document.querySelector('.round-cards');
-    if (!grid || document.getElementById('grantAllBar') || role !== 'admin') return;
-    const later = (S.rounds || []).filter(r => r.n > 1);
-    const all = later.length && S.teams?.length && later.every(r => S.teams.every(t => S.roundAccess?.[`${r.n}-${t.code}`]));
-    const bar = document.createElement('div');
-    bar.id = 'grantAllBar'; bar.className = 'grant-all-bar';
-    bar.innerHTML = `<div><strong>Round access for all teams</strong><span>Let every team enter every round without a password. Locks still apply — you control the phones from each round card.</span></div><button class="btn${all ? ' light' : ''}" onclick="grantAllRoundsAccess()">${all ? 'Require passwords again' : 'Grant access to all rounds'}</button>`;
-    grid.parentNode.insertBefore(bar, grid);
-  }
-
-  // ---- Lobby hero: quiz name, host photo + name, team roster count ----
-  function lobbyHero(light, myTeam) {
-    const total = (S.teams || []).length, here = (S.teams || []).filter(t => t.online || t.present || t.checkedIn).length || total;
-    const photo = S.hostPhotoUrl ? `<img src="${esc(S.hostPhotoUrl)}" alt="Quiz master">` : `<div class="lobby-avatar">🎤</div>`;
-    return `<section class="lobby-hero${light ? ' light' : ''}" id="lobbyHero">${photo}<div><small>${esc(S.portalName || 'Welcome to')}</small><h2>${esc(S.quizName || 'QUIZ MASTER')}</h2><p>Hosted by <strong>${esc(S.hostName || 'your Quiz Master')}</strong></p><span class="lobby-count">${here} of ${total} teams in the lobby</span>${myTeam ? `<span class="lobby-you">You are ${esc(myTeam)}</span>` : ''}</div></section>`;
-  }
-  function decorateLobby() {
-    if (document.getElementById('lobbyHero')) return;
-    const grid = document.querySelector('.lobby-grid, .lobby-teams, .lobby-team')?.closest('section,div');
-    const first = document.querySelector('.lobby-team');
-    if (!first) return;
-    const container = first.parentElement;
-    const isParticipant = role === 'participant';
-    const me = isParticipant ? (S.teams || []).find(t => t.code === (window.TEAM_CODE || S.teamCode))?.name || S.teamName : '';
-    container.insertAdjacentHTML('beforebegin', lobbyHero(isParticipant, me));
-  }
-
-
-  // ---- On-screen diagnostics: open the page with ?debug=1 to see errors and what was tapped ----
-  if (/[?&]debug=1/.test(location.search)) {
-    const box = document.createElement('pre');
-    box.style.cssText = 'position:fixed;left:6px;right:6px;bottom:6px;max-height:38vh;overflow:auto;margin:0;padding:8px 10px;background:#111c;color:#7CFFB2;font:11px/1.35 monospace;z-index:2147483647;border-radius:8px;pointer-events:none;white-space:pre-wrap';
-    const lines = [];
-    const log = (t) => { lines.push(t); if (lines.length > 14) lines.shift(); box.textContent = lines.join('\n'); };
-    const attach = () => { if (!box.isConnected) document.body.append(box); };
-    window.addEventListener('error', (e) => log('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
-    window.addEventListener('unhandledrejection', (e) => log('PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)));
-    const desc = (el) => el ? (el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '')) : 'none';
-    ['pointerdown', 'click'].forEach((type) => document.addEventListener(type, (e) => {
-      const top = document.elementFromPoint(e.clientX, e.clientY);
-      log(type + ' target=' + desc(e.target) + ' top=' + desc(top) + (S ? ' tab=' + S.tab : ''));
-    }, true));
-    log('debug on — tap the Rounds tab');
-    attach(); document.addEventListener('DOMContentLoaded', attach);
-    setInterval(attach, 1500);
-  }
-
-
-  // ---- Rounds tab safety net: a bad piece of data must never freeze the tab ----
-  function showErrorBanner(msg) {
-    let b = document.getElementById('qmErrorBanner');
-    if (!b) {
-      b = document.createElement('div');
-      b.id = 'qmErrorBanner';
-      b.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:2147483000;padding:10px 14px;border-radius:12px;background:#fff1f2;border:1px solid #f3b6be;color:#8f2536;font:600 12px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0002';
-      b.addEventListener('click', () => b.remove());
-      document.body.append(b);
-    }
-    b.textContent = 'Rounds tab problem (tap to dismiss): ' + msg;
-  }
-  const baseRoundCard = window.roundCard;
-  if (typeof baseRoundCard === 'function') {
-    window.roundCard = function (r) {
-      try { return baseRoundCard(r); }
-      catch (e) {
-        console.error('roundCard failed', e);
-        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
-        const name = esc(r && r.name || ('Round ' + (r && r.n)));
-        const live = r && r.active;
-        const action = live && typeof toggleParticipantLock === 'function'
-          ? `<button class="btn tiny" onclick="toggleParticipantLock(${r.n})">${r.participantLocked ? 'Unlock participant screens' : 'Lock participant screens'}</button>`
-          : (r && !live && r.status !== 'Completed' && typeof startRound === 'function' ? `<button class="btn tiny" onclick="startRound(${r.n})">Start ${name}</button>` : '');
-        return `<article class="card round-card"><header><span class="eyebrow">ROUND ${r ? r.n : ''}</span><strong>${name}</strong></header><p style="font-size:12px;color:#5f6478">This round could not be drawn in full, but its main controls still work.</p>${action}</article>`;
-      }
-    };
-  }
-  const baseRoundsPage = window.roundsPage;
-  if (typeof baseRoundsPage === 'function') {
-    window.roundsPage = function () {
-      try { return baseRoundsPage.apply(this, arguments); }
-      catch (e) {
-        console.error('roundsPage failed', e);
-        setTimeout(() => showErrorBanner(String(e && e.message || e)), 0);
-        return '<section class="card" style="padding:18px"><strong>Rounds could not be displayed.</strong><p style="font-size:12px;color:#5f6478">Reload the page. If this keeps happening, send the red message at the top of the screen.</p></section>';
-      }
-    };
-  }
-
-  const baseRenderForPolish = window.render;
-  if (typeof baseRenderForPolish === 'function') {
-    window.render = function () {
-      // The original render always runs first; nothing below may ever stop it or block clicks.
-      baseRenderForPolish.apply(this, arguments);
-      try { addPolishStyles(); } catch (e) { console.warn('polish styles', e); }
-      try { animateStatCounters(); } catch (e) { console.warn('polish counters', e); }
-      try { decorateRounds(); } catch (e) { console.warn('polish rounds', e); }
-      try { decorateLobby(); } catch (e) { console.warn('polish lobby', e); }
-    };
-  }
-})();
+export default { async fetch(request,env){
+ try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);if(url.pathname.startsWith('/media/')){if(request.method!=='GET')return new Response('Not found',{status:404});const id=url.pathname.slice('/media/'.length);if(!/^[0-9a-f-]{36}$/i.test(id))return new Response('Not found',{status:404});const row=await env.DB.prepare('SELECT mime_type,data FROM question_media WHERE id=?').bind(id).first();if(!row)return new Response('Not found',{status:404});return new Response(row.data,{headers:{'content-type':row.mime_type,'cache-control':'public, max-age=31536000','x-content-type-options':'nosniff'}})}if(!['/','/index.html','/admin','/admin.html','/participant','/participant.html','/audience','/audience.html'].includes(url.pathname))return new Response('Not found',{status:404});return await env.ASSETS.fetch(request)}
+ catch(e){console.error(e);return fail(e.status||500,e.status?e.message:'Server error')}
+}};
