@@ -366,6 +366,48 @@
     };
   }
 
+
+  // ---- Tab-tap rescue (admin) ----------------------------------------------------
+  // A normal tap is lost if the page redraws between finger-down and finger-up, or if
+  // something invisible sits on top of a tab. This looks at what is under the finger
+  // (even through overlays) and switches the tab itself if the normal click didn't.
+  // Also lets you open a tab directly: /admin#rounds
+  function navUnder(x, y) {
+    try {
+      return document.elementsFromPoint(x, y).map(el => el.closest && el.closest('.nav')).find(Boolean) || null;
+    } catch { return null; }
+  }
+  const navLabel = (n) => n ? (n.textContent || '').replace(/[^A-Za-z]/g, '').replace(/\d+$/, '') : '';
+  if (role === 'admin') {
+    let down = null;
+    document.addEventListener('pointerdown', (e) => {
+      const n = navUnder(e.clientX, e.clientY);
+      down = n ? { label: navLabel(n), x: e.clientX, y: e.clientY } : null;
+    }, true);
+    document.addEventListener('pointerup', (e) => {
+      if (!down) return;
+      const d = down; down = null;
+      if (Math.abs(e.clientX - d.x) > 14 || Math.abs(e.clientY - d.y) > 14) return;
+      const n = navUnder(e.clientX, e.clientY);
+      if (!n || navLabel(n) !== d.label) return;
+      setTimeout(() => {
+        if (S && S.tab !== d.label && typeof go === 'function') { try { go(d.label); } catch (err) { showErrorBanner(String(err && err.message || err)); } }
+      }, 120);
+    }, true);
+    const fromHash = () => {
+      const want = (location.hash || '').replace('#', '').toLowerCase();
+      if (!want) return;
+      const tries = setInterval(() => {
+        const match = ['Overview', 'Teams', 'Questions', 'Rounds', 'Projector', 'Settings'].find(t => t.toLowerCase() === want);
+        if (!match) return clearInterval(tries);
+        if (S && Array.isArray(S.rounds) && S.tab !== undefined && document.querySelector('.nav')) { clearInterval(tries); if (S.tab !== match) go(match); }
+      }, 300);
+      setTimeout(() => clearInterval(tries), 12000);
+    };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+  }
+
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
