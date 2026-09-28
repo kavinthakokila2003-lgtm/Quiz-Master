@@ -117,6 +117,43 @@
       h1,h2,h3{letter-spacing:-.035em} .welcome h1{font-size:clamp(25px,3vw,34px);line-height:1.08}.nav{font-weight:700}
       .team-logo{border-radius:29%;filter:saturate(1.08)}.team-logo-glyph{font-weight:800}
       .round-team-selection .team-access-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px}.round-team-pick{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.round-team-pick input{accent-color:#6556d8;width:17px;height:17px}.round-team-pick strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.round-team-selected{background:linear-gradient(100deg,#f3f1ff,#fbfcff)}.round-team-selection .team-access-row>code{margin-left:0}.round-team-selection button:disabled{opacity:.55;cursor:not-allowed}.team-password-action{white-space:nowrap}
+      /* Consistent spacing and grouping across all admin sections. */
+      .main{display:flex;flex-direction:column;gap:18px;min-width:0}
+      .main>.welcome{margin:0 0 2px;align-items:center;gap:18px}
+      .main>.card,.main>.stats,.main>.panels,.main>.round-cards{margin-top:0!important}
+      .main>.stats{gap:14px}
+      .main>.panels{gap:16px;align-items:stretch}
+      .main>.panels>.card,.main>.card{border:1px solid #e9eaf2;box-shadow:0 10px 30px #27304a0b}
+      .main .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .main .toolbar{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+      .main .q-form{display:grid;gap:16px;padding:22px}
+      .main .q-form>.form-grid{margin:0}
+      .main .question{margin:0 0 12px;padding:18px;border:1px solid #eaebf3;border-radius:16px;background:linear-gradient(140deg,#fff,#fbfbfe)}
+      .main .question:last-child{margin-bottom:0}
+      .main .table-wrap{border-radius:14px}
+      .main .table-panel{padding:20px}
+      .main .settings-card{display:grid;gap:16px}
+      .main .settings-card>.field,.main .settings-card>.switch-row,.main .settings-card>.export-card{margin:0}
+      .main .share-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .main .share-links>div{display:grid;gap:9px;align-content:start;padding:15px;border:1px solid #ececf3;border-radius:14px;background:#fbfbfe}
+      .main .share-links code{overflow-wrap:anywhere}
+      .main .round-cards{display:grid;gap:16px}
+      .round-waiting-label{display:inline-flex;align-items:center;min-height:40px;padding:8px 13px;border-radius:11px;background:#fff7e8;color:#895611;font-size:12px;font-weight:750}
+      .intermission-review{margin:20px 0;padding:18px;text-align:left;border:1px solid #e7e6f4;border-radius:18px;background:linear-gradient(145deg,#faf9ff,#f5fbf9)}
+      .intermission-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+      .intermission-heading h2{margin:5px 0;font-size:20px}
+      .intermission-heading p{margin:0;color:#656b7d;font-size:13px}
+      .intermission-score{display:grid;grid-template-columns:auto auto;align-items:center;gap:2px 8px;padding:10px 13px;border-radius:14px;background:white;box-shadow:0 5px 16px #20253b0b}
+      .intermission-score b{font-size:18px;color:#206b51}.intermission-score b:nth-of-type(2){color:#a94558}
+      .intermission-score span{font-size:11px;color:#656b7d}
+      .intermission-answers{display:grid;gap:8px;margin-top:14px}
+      .intermission-answers article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:11px 13px;border-radius:12px;background:#fff}
+      .intermission-answers article>span{font-size:13px;font-weight:700}
+      .intermission-answers article>b{font-size:12px}
+      .intermission-answers article>small{grid-column:1/-1;color:#686e7e}
+      .next-round-ready{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #e5e7f0;border-radius:14px;background:#fff}
+      .next-round-ready p{margin:0;color:#555d71;font-size:13px}
+      @media(max-width:760px){.main>.welcome{align-items:flex-start;flex-direction:column}.main .share-links{grid-template-columns:1fr}.main .toolbar{justify-content:flex-start}.intermission-heading{align-items:flex-start;flex-direction:column}.intermission-answers article{grid-template-columns:1fr auto}}
       @media(max-width:700px){.round-team-selection .team-access-row{grid-template-columns:1fr;align-items:start}.round-team-pick{min-height:42px}}
       @media(prefers-reduced-motion:reduce){
         .enhance-overlay,.enhance-modal{transition:none!important}
