@@ -109,7 +109,33 @@
       .sidebar .nav.active .ico{animation:navPop .3s ease both}
       @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
 
+
+      /* ---------- Rounds tab: cleaner cards, no underlined text ---------- */
+      .round-card,.round-card *,.round-card summary{text-decoration:none!important}
+      .round-card h3,.round-card .round-title{letter-spacing:-.01em}
+      .round-card.round-card-modern{border:1px solid #e6e8f2}
+      .round-card .btn{border-radius:12px;font-weight:800}
+      .grant-all-bar{max-width:1020px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border-radius:16px;background:linear-gradient(120deg,#f4f2ff,#effbf7);border:1px solid #dcd8fb}
+      .grant-all-bar strong{display:block;font-size:14px;color:#232742}
+      .grant-all-bar span{font-size:12px;color:#5f6478}
+      .grant-all-bar .btn{white-space:nowrap}
+
+      /* ---------- Waiting lobby hero (participants + projector) ---------- */
+      .lobby-hero{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;max-width:820px;margin:0 auto 22px;padding:22px 26px;border-radius:24px;background:linear-gradient(135deg,#ffffff14,#ffffff06);border:1px solid #ffffff26;backdrop-filter:blur(8px);animation:hostReveal .6s cubic-bezier(.2,.8,.2,1) both}
+      .lobby-hero.light{background:linear-gradient(135deg,#fff,#f6f4ff);border-color:#dcd8fb;color:#232742}
+      .lobby-hero img,.lobby-hero .lobby-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #ffffffcc;box-shadow:0 0 0 4px #7566e94d,0 12px 28px #0003;animation:heroFloat 5s ease-in-out infinite}
+      .lobby-hero .lobby-avatar{display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,#7161f2,#2b9c86);color:#fff}
+      .lobby-hero small{display:block;font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.7;text-transform:uppercase}
+      .lobby-hero h2{margin:4px 0 2px;font-size:clamp(22px,4vw,38px);line-height:1.1}
+      .lobby-hero p{margin:0;font-size:14px;opacity:.85}
+      .lobby-hero .lobby-count{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:20px;background:#2b9c8626;color:#2b9c86;font-size:12px;font-weight:800}
+      .lobby-hero .lobby-you{display:inline-block;margin:10px 0 0 8px;padding:5px 12px;border-radius:20px;background:#7566e926;font-size:12px;font-weight:800}
+      body:has(#lobbyHero) .host-banner,body:has(#lobbyHero) .host-welcome{display:none}
+      @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+      @media(max-width:560px){.lobby-hero{grid-template-columns:1fr;justify-items:center;text-align:center}}
+
       @media(prefers-reduced-motion:reduce){
+        .lobby-hero,.lobby-hero img{animation:none!important}
         .enhance-overlay,.enhance-modal{transition:none!important}
         .host-banner,.host-welcome,.projector-host{animation:none!important}
         .team-login,.hero,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
@@ -180,30 +206,25 @@
   // during a live round, counts it, and — when they come back — blocks the screen
   // with a clear "return to the quiz" prompt instead of a passive toast.
   let tabSwitchCount = 0, wentAwayAt = 0;
-  function inLiveRound() { return role === 'participant' && S && S.phase === 'play' && (window.qmFocusProtectionActive ? window.qmFocusProtectionActive() : activeRound?.focusRequired !== false && !S.team?.focusExempt); }
+  function inLiveRound() { return role === 'participant' && S && S.phase === 'play'; }
   function armAntiCheat() {
     if (window.__qmAntiCheatBound) return;
     window.__qmAntiCheatBound = true;
     document.addEventListener('visibilitychange', () => {
       if (!inLiveRound()) return;
-      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); reportFocusEvent('tab-hidden'); }
+      if (document.hidden) { tabSwitchCount++; wentAwayAt = Date.now(); }
       else if (wentAwayAt) { wentAwayAt = 0; showReturnPrompt(); }
     });
     document.addEventListener('fullscreenchange', () => {
-      if (inLiveRound() && !document.fullscreenElement) { reportFocusEvent('fullscreen-exit'); showReturnPrompt(); }
+      if (inLiveRound() && !document.fullscreenElement) showReturnPrompt();
     });
-  }
-  function reportFocusEvent(event) {
-    const token = window.TEAM_TOKEN || (typeof TEAM_TOKEN !== 'undefined' ? TEAM_TOKEN : '');
-    if (!token) return;
-    fetch('/api/team/focus-event', { method:'POST', headers:{'content-type':'application/json',authorization:`Bearer ${token}`}, body:JSON.stringify({event}) }).catch(()=>{});
   }
   function showReturnPrompt() {
     if (document.getElementById('anticheatPrompt')) return;
     const modal = document.createElement('div');
     modal.className = 'enhance-overlay';
     modal.id = 'anticheatPrompt';
-    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Return to the quiz</h2><p>Your host can see this focus alert. The quiz timer continues while you are away. Websites cannot block other apps, so please follow your host’s rules.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
+    modal.innerHTML = `<section class="enhance-modal polish-modal"><div class="modal-icon anticheat-icon">⚠</div><div class="eyebrow">FOCUS PROTECTION</div><h2>Stay on the quiz screen</h2><p>Leaving this tab or exiting fullscreen during a live round is recorded. Your timer keeps running while you're away, so return quickly.</p>${tabSwitchCount > 1 ? `<span class="anticheat-count">${tabSwitchCount} times away this round</span>` : ''}<div class="modal-actions"><button class="btn" data-role="back">Return to the round</button></div></section>`;
     document.body.append(modal);
     requestAnimationFrame(() => modal.classList.add('visible'));
     modal.querySelector('[data-role="back"]').addEventListener('click', async () => {
@@ -241,12 +262,56 @@
       })(startTime);
     });
   }
+
+  // ---- Admin: one-click access to every round for every team ----
+  window.grantAllRoundsAccess = function () {
+    if (!S.teams?.length) return toast('Add teams first.');
+    S.roundAccess = S.roundAccess || {};
+    const later = (S.rounds || []).filter(r => r.n > 1);
+    const already = later.every(r => S.teams.every(t => S.roundAccess[`${r.n}-${t.code}`]));
+    for (const r of later) for (const t of S.teams) {
+      const key = `${r.n}-${t.code}`;
+      if (already) delete S.roundAccess[key]; else S.roundAccess[key] = true;
+    }
+    save(); render();
+    toast(already ? 'Round passwords are required again.' : 'All teams can now enter every round.');
+  };
+
+  function decorateRounds() {
+    const grid = document.querySelector('.round-cards');
+    if (!grid || document.getElementById('grantAllBar') || role !== 'admin') return;
+    const later = (S.rounds || []).filter(r => r.n > 1);
+    const all = later.length && S.teams?.length && later.every(r => S.teams.every(t => S.roundAccess?.[`${r.n}-${t.code}`]));
+    const bar = document.createElement('div');
+    bar.id = 'grantAllBar'; bar.className = 'grant-all-bar';
+    bar.innerHTML = `<div><strong>Round access for all teams</strong><span>Let every team enter every round without a password. Locks still apply — you control the phones from each round card.</span></div><button class="btn${all ? ' light' : ''}" onclick="grantAllRoundsAccess()">${all ? 'Require passwords again' : 'Grant access to all rounds'}</button>`;
+    grid.parentNode.insertBefore(bar, grid);
+  }
+
+  // ---- Lobby hero: quiz name, host photo + name, team roster count ----
+  function lobbyHero(light, myTeam) {
+    const total = (S.teams || []).length, here = (S.teams || []).filter(t => t.online || t.present || t.checkedIn).length || total;
+    const photo = S.hostPhotoUrl ? `<img src="${esc(S.hostPhotoUrl)}" alt="Quiz master">` : `<div class="lobby-avatar">🎤</div>`;
+    return `<section class="lobby-hero${light ? ' light' : ''}" id="lobbyHero">${photo}<div><small>${esc(S.portalName || 'Welcome to')}</small><h2>${esc(S.quizName || 'QUIZ MASTER')}</h2><p>Hosted by <strong>${esc(S.hostName || 'your Quiz Master')}</strong></p><span class="lobby-count">${here} of ${total} teams in the lobby</span>${myTeam ? `<span class="lobby-you">You are ${esc(myTeam)}</span>` : ''}</div></section>`;
+  }
+  function decorateLobby() {
+    if (document.getElementById('lobbyHero')) return;
+    const grid = document.querySelector('.lobby-grid, .lobby-teams, .lobby-team')?.closest('section,div');
+    const first = document.querySelector('.lobby-team');
+    if (!first) return;
+    const container = first.parentElement;
+    const isParticipant = role === 'participant';
+    const me = isParticipant ? (S.teams || []).find(t => t.code === (window.TEAM_CODE || S.teamCode))?.name || S.teamName : '';
+    container.insertAdjacentHTML('beforebegin', lobbyHero(isParticipant, me));
+  }
+
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
       baseRenderForPolish();
       addPolishStyles();
       animateStatCounters();
+      try { decorateRounds(); decorateLobby(); } catch (e) { console.warn(e); }
     };
   }
 })();
