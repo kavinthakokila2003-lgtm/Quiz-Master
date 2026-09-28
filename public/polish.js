@@ -305,6 +305,26 @@
     container.insertAdjacentHTML('beforebegin', lobbyHero(isParticipant, me));
   }
 
+
+  // ---- On-screen diagnostics: open the page with ?debug=1 to see errors and what was tapped ----
+  if (/[?&]debug=1/.test(location.search)) {
+    const box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;left:6px;right:6px;bottom:6px;max-height:38vh;overflow:auto;margin:0;padding:8px 10px;background:#111c;color:#7CFFB2;font:11px/1.35 monospace;z-index:2147483647;border-radius:8px;pointer-events:none;white-space:pre-wrap';
+    const lines = [];
+    const log = (t) => { lines.push(t); if (lines.length > 14) lines.shift(); box.textContent = lines.join('\n'); };
+    const attach = () => { if (!box.isConnected) document.body.append(box); };
+    window.addEventListener('error', (e) => log('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
+    window.addEventListener('unhandledrejection', (e) => log('PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)));
+    const desc = (el) => el ? (el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '')) : 'none';
+    ['pointerdown', 'click'].forEach((type) => document.addEventListener(type, (e) => {
+      const top = document.elementFromPoint(e.clientX, e.clientY);
+      log(type + ' target=' + desc(e.target) + ' top=' + desc(top) + (S ? ' tab=' + S.tab : ''));
+    }, true));
+    log('debug on — tap the Rounds tab');
+    attach(); document.addEventListener('DOMContentLoaded', attach);
+    setInterval(attach, 1500);
+  }
+
   const baseRenderForPolish = window.render;
   if (typeof baseRenderForPolish === 'function') {
     window.render = function () {
