@@ -117,6 +117,20 @@
       h1,h2,h3{letter-spacing:-.035em} .welcome h1{font-size:clamp(25px,3vw,34px);line-height:1.08}.nav{font-weight:700}
       .team-logo{border-radius:29%;filter:saturate(1.08)}.team-logo-glyph{font-weight:800}
       .round-team-selection .team-access-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px}.round-team-pick{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.round-team-pick input{accent-color:#6556d8;width:17px;height:17px}.round-team-pick strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.round-team-selected{background:linear-gradient(100deg,#f3f1ff,#fbfcff)}.round-team-selection .team-access-row>code{margin-left:0}.round-team-selection button:disabled{opacity:.55;cursor:not-allowed}.team-password-action{white-space:nowrap}
+      /* Keep each team's access controls on its own full-width row. */
+      .round-team-selection>.team-access-list{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0!important;flex-direction:column!important;padding:4px 14px 12px!important}
+      .round-team-selection .team-access-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(150px,210px) auto!important;gap:14px!important;align-items:center!important;padding:12px 10px!important;border-bottom:1px solid #eceef4!important;border-radius:0!important}
+      .round-team-selection .team-access-row:last-child{border-bottom:0!important}
+      .round-team-selection .team-access-row>label{display:flex;align-items:center;gap:11px;min-width:0}
+      .round-team-selection .team-access-row>label .team-logo{flex:none}
+      .round-team-selection .team-access-row>label strong{min-width:0;white-space:normal}
+      .round-team-selection .team-access-row>code{display:inline-flex;justify-self:start;margin:0;padding:7px 10px;border-radius:9px;background:#f5f6fa;color:#687087;font-size:10px;letter-spacing:0;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+      .round-team-selection .team-access-row.round-team-selected{background:#f8f7ff}
+      .round-team-selection .team-access-row>.small-link{justify-self:end;min-height:34px;padding:7px 11px;border-radius:9px;background:#f2f0ff;color:#5b4cc7;white-space:nowrap}
+      .round-team-selection .team-access-row>.small-link:disabled{background:#f2f3f6;color:#898da0}
+      .round-team-selection .team-access-row>label input{flex:none}
+      .round-team-selection .team-access-row>code,.round-team-selection .team-access-row>.small-link{grid-column:auto!important;grid-row:auto!important}
+      .lobby-team{animation:none!important}
       /* Consistent spacing and grouping across all admin sections. */
       .main{display:flex;flex-direction:column;gap:18px;min-width:0}
       .main>.welcome{margin:0 0 2px;align-items:center;gap:18px}
@@ -153,8 +167,8 @@
       .intermission-answers article>small{grid-column:1/-1;color:#686e7e}
       .next-round-ready{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #e5e7f0;border-radius:14px;background:#fff}
       .next-round-ready p{margin:0;color:#555d71;font-size:13px}
-      @media(max-width:760px){.main>.welcome{align-items:flex-start;flex-direction:column}.main .share-links{grid-template-columns:1fr}.main .toolbar{justify-content:flex-start}.intermission-heading{align-items:flex-start;flex-direction:column}.intermission-answers article{grid-template-columns:1fr auto}}
-      @media(max-width:700px){.round-team-selection .team-access-row{grid-template-columns:1fr;align-items:start}.round-team-pick{min-height:42px}}
+      @media(max-width:760px){.main>.welcome{align-items:flex-start;flex-direction:column}.main .share-links{grid-template-columns:1fr}.main .toolbar{justify-content:flex-start}.intermission-heading{align-items:flex-start;flex-direction:column}.intermission-answers article{grid-template-columns:1fr auto}.round-team-selection .team-access-row{grid-template-columns:minmax(0,1fr) auto!important;gap:7px 12px!important}.round-team-selection .team-access-row>code{grid-column:1!important;grid-row:2!important}.round-team-selection .team-access-row>.small-link{grid-column:2!important;grid-row:1/3!important}}
+      @media(max-width:520px){.round-team-selection .team-access-row{grid-template-columns:minmax(0,1fr)!important}.round-team-selection .team-access-row>code,.round-team-selection .team-access-row>.small-link{grid-column:1!important;grid-row:auto!important;justify-self:start}.round-team-selection .team-access-row>.small-link{min-height:36px}}
       @media(prefers-reduced-motion:reduce){
         .enhance-overlay,.enhance-modal{transition:none!important}
         .host-banner,.host-welcome,.projector-host{animation:none!important}
