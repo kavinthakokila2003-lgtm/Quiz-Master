@@ -52,3 +52,10 @@ The Rounds tab now shows a focused round selector; configuration appears only fo
 - Audience projector: `/audience`
 
 
+# Participant question access fix
+
+The participant page now uses a dedicated, responsive question screen with accessible answer choices, typed answers, saved drafts during a host pause, clear submission feedback, and a clear lobby message when a round has no questions. The Worker rejects attempts to start an empty round and reports accurate question counts to the participant lobby. No D1 schema or database ID changes are included.
+
+For the current tournament data, Round 1 had no questions while Round 2 had two. Teams cannot skip Round 1, so add a question to Round 1 (or edit an existing question and assign it to Round 1) in Admin → Questions before starting. Then grant team access, start the round, and unlock participant screens when ready.
+
+Deploy with the existing Cloudflare command `npx wrangler deploy --config ./wrangler.jsonc`.
