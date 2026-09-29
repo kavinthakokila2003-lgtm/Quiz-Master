@@ -67,3 +67,7 @@ The selected round now has a clearly labeled, high-visibility start control that
 # Participant media and visual update
 
 Participant question photos now use a clear, centered image frame; uploaded and embedded videos use a larger responsive player. If media fails to load, participants see a helpful message instead of a blank space. Question text and answer choices have larger type and more comfortable line spacing, and question cards enter with a short stagger. The owl mascot, brand mark, team emblems, and navigation icons have gentle motion; system reduced-motion preferences are honored.
+
+# Media delivery and round readiness update
+
+D1 returns BLOB columns as byte arrays; the `/media/` route now converts those bytes to a browser-readable response, which fixes uploaded question images failing on participant devices. New uploads are checked by reopening the saved media before the question can be saved. The selected-round panel now lists every team’s access, earlier-round, and ready status. It clearly shows that screens are locked before a round starts and remain locked after starting until the admin unlocks them. A layered vector owl now has subtle breathing, wing, head, and blink motion. No D1 schema or database ID changes were made.
