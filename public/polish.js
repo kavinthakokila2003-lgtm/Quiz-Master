@@ -106,8 +106,7 @@
 
       /* Sidebar nav icon: a touch more life on hover/active */
       .sidebar .nav:hover .ico{transform:translateY(-1px) rotate(-4deg)}
-      .sidebar .nav.active .ico{animation:navPop .3s ease both}
-      @keyframes navPop{from{transform:scale(.85)}to{transform:scale(1)}}
+      .sidebar .nav.active .ico{animation:none;transform:scale(1)}
 
       /* Avoid replaying entrance effects on each live state refresh. */
       .hero,.team-login,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
@@ -115,7 +114,7 @@
       .hero{background-size:cover!important}
       .brand{letter-spacing:-.035em}.brand .mark{font-weight:900;letter-spacing:-.08em;border-radius:13px;box-shadow:0 8px 20px #6658d538}
       h1,h2,h3{letter-spacing:-.035em} .welcome h1{font-size:clamp(25px,3vw,34px);line-height:1.08}.nav{font-weight:700}
-      .team-logo{border-radius:29%;filter:saturate(1.08)}.team-logo-glyph{font-weight:800}
+      .team-logo{border-radius:29%;filter:saturate(1.08);transform-style:preserve-3d;perspective:240px;box-shadow:inset 0 1px 0 #ffffffc9,inset 0 -3px 6px #20253c19,0 7px 13px color-mix(in srgb,var(--logo-color) 23%,transparent);animation:teamLogoHover 5.8s ease-in-out infinite;will-change:transform}.team-logo:before{transform:translateZ(2px);box-shadow:inset 0 1px 2px #ffffffa8}.team-logo-glyph{font-weight:800;transform:translateZ(7px);filter:drop-shadow(0 2px 1px #20253c35)}.team-logo-spark{transform:translateZ(5px)}@keyframes teamLogoHover{0%,100%{transform:perspective(240px) rotateX(5deg) rotateY(-7deg) translateY(0)}50%{transform:perspective(240px) rotateX(-4deg) rotateY(7deg) translateY(-2px)}}.team-cell:hover .team-logo,.qm-team-access-row:hover .team-logo{transform:perspective(240px) rotateX(0) rotateY(0) translateY(-2px) scale(1.07);animation-play-state:paused}
       .round-team-selection .team-access-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px}.round-team-pick{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}.round-team-pick input{accent-color:#6556d8;width:17px;height:17px}.round-team-pick strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.round-team-selected{background:linear-gradient(100deg,#f3f1ff,#fbfcff)}.round-team-selection .team-access-row>code{margin-left:0}.round-team-selection button:disabled{opacity:.55;cursor:not-allowed}.team-password-action{white-space:nowrap}
       /* Keep each team's access controls on its own full-width row. */
       .round-team-selection>.team-access-list{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0!important;flex-direction:column!important;padding:4px 14px 12px!important}
@@ -171,7 +170,7 @@
       @media(max-width:520px){.round-team-selection .team-access-row{grid-template-columns:minmax(0,1fr)!important}.round-team-selection .team-access-row>code,.round-team-selection .team-access-row>.small-link{grid-column:1!important;grid-row:auto!important;justify-self:start}.round-team-selection .team-access-row>.small-link{min-height:36px}}
       @media(prefers-reduced-motion:reduce){
         .enhance-overlay,.enhance-modal{transition:none!important}
-        .host-banner,.host-welcome,.projector-host{animation:none!important}
+        .host-banner,.host-welcome,.projector-host,.team-logo{animation:none!important}
         .team-login,.hero,.stats>.stat,.round-cards>.round-card,.panels>.card,.table-panel,.question,.q-form,
         .leader-row:nth-child(1) .rank,.sidebar .nav.active .ico,.btn:before{animation:none!important;transition:none!important}
       }

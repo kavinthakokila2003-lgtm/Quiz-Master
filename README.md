@@ -59,3 +59,7 @@ The participant page now uses a dedicated, responsive question screen with acces
 For the current tournament data, Round 1 had no questions while Round 2 had two. Teams cannot skip Round 1, so add a question to Round 1 (or edit an existing question and assign it to Round 1) in Admin → Questions before starting. Then grant team access, start the round, and unlock participant screens when ready.
 
 Deploy with the existing Cloudflare command `npx wrangler deploy --config ./wrangler.jsonc`.
+
+# Admin controls and visual update
+
+The selected round now has a clearly labeled, high-visibility start control that stays in view while scrolling. It explains why a round is locked and keeps the existing checks for assigned questions, earlier-round completion, team access, and team readiness. Admin live refreshes run less often and restore expanded panels after an update. Repeated panel entrance and active-tab pop animations were removed to stop the blinking effect. Team logos have a subtle 3D tilt and depth treatment, with reduced-motion preferences respected. No D1 schema or database binding changes were made.
