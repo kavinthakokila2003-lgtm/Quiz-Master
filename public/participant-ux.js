@@ -27,6 +27,16 @@
     const next = (S.rounds || []).find((round) => Number(round.n) === progress + 1);
     const active = (S.rounds || []).find((round) => round.active && progress < Number(round.n));
     const current = active || next;
+    if (active && Number(S.team?.readyRound) === Number(active.n) && S.team?.canEnterActiveRound !== false) {
+      const message = active.participantLocked
+        ? `<div class="round-entry team-round-closed"><p>🔒 ${esc(active.name)} has started. Your team is ready; wait for the host to unlock participant screens.</p></div>`
+        : `<div class="round-entry team-round-closed"><p>${esc(active.name)} is opening. Your questions will appear here automatically.</p></div>`;
+      const page = document.createElement('div');
+      page.innerHTML = markup;
+      const entry = page.querySelector('.round-entry');
+      if (entry) entry.outerHTML = message;
+      markup = page.innerHTML;
+    }
     if (current && Number(current.q || 0) === 0) {
       const message = `<aside class="participant-status-card participant-status-preparing" role="status"><span class="participant-status-icon">i</span><div><strong>Questions are being prepared</strong><p>${esc(current.name || `Round ${current.n}`)} does not have any questions yet. Your team can enter as soon as the host adds questions and opens the round.</p></div></aside>`;
       markup = markup.replace('<div class="progressline"', `${message}<div class="progressline"`);

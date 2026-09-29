@@ -75,3 +75,7 @@ D1 returns BLOB columns as byte arrays; the `/media/` route now converts those b
 # Participant photo and readiness flow fix
 
 The participant photo delivery route converts D1 image bytes into a valid browser response. The round workflow is: the admin selects a round and grants access to specific teams (or all teams); each selected team uses the Ready button in its waiting area; the admin sees each team’s access, earlier-round eligibility, and ready status; Start becomes available after every selected eligible team is ready. Starting a round keeps participant screens locked until the admin unlocks them. Teams may mark ready before a round starts even when the tournament-wide pause toggle is on. No D1 schema or database ID changes were made.
+
+# Large photo and host-start update
+
+Large still photos are resized and converted to JPEG in the admin browser before upload, targeting the existing 1.8 MB storage limit. Large GIFs are not flattened; use a smaller GIF or a public link. Videos remain unchanged and must fit the upload limit or use a public link. Participants keep the Ready check-in button, but no longer have an Enter/Start round button: after the admin starts and unlocks a round, the ready team’s questions open automatically. Teams included by the admin when starting a round can enter without another round password prompt. No D1 schema or database ID changes were made.
