@@ -63,3 +63,7 @@ Deploy with the existing Cloudflare command `npx wrangler deploy --config ./wran
 # Admin controls and visual update
 
 The selected round now has a clearly labeled, high-visibility start control that stays in view while scrolling. It explains why a round is locked and keeps the existing checks for assigned questions, earlier-round completion, team access, and team readiness. Admin live refreshes run less often and restore expanded panels after an update. Repeated panel entrance and active-tab pop animations were removed to stop the blinking effect. Team logos have a subtle 3D tilt and depth treatment, with reduced-motion preferences respected. No D1 schema or database binding changes were made.
+
+# Participant media and visual update
+
+Participant question photos now use a clear, centered image frame; uploaded and embedded videos use a larger responsive player. If media fails to load, participants see a helpful message instead of a blank space. Question text and answer choices have larger type and more comfortable line spacing, and question cards enter with a short stagger. The owl mascot, brand mark, team emblems, and navigation icons have gentle motion; system reduced-motion preferences are honored.
