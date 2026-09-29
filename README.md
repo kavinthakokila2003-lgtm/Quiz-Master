@@ -1,6 +1,6 @@
 # QUIZ MASTER — Cloudflare update package
 
-This update keeps your current Cloudflare Worker and D1 database and adds an R2 bucket for uploaded media. Existing teams, rounds, questions, and previously uploaded D1 media remain available. No D1 schema or database ID change is required.
+This update uses your existing Cloudflare Worker and D1 database only. No R2 bucket or paid storage service is required. Existing teams, rounds, questions, and previously uploaded media remain available. No D1 schema or database ID change is required.
 
 ## Included changes
 
@@ -16,7 +16,7 @@ This update keeps your current Cloudflare Worker and D1 database and adds an R2 
 - Round 1 has no password. For later rounds, the admin can keep passwords on, turn them off for everyone, or grant direct access to selected teams.
 - Admins can set the tournament to 1–20 rounds and edit each round name. Removing a round is blocked if it is active or has submitted answers; its questions are removed after confirmation.
 - Admin can create or CSV-import multiple-choice and typed-answer questions, add images/videos, and set points and round times.
-- New photos and videos up to 50 MB are stored in the Cloudflare R2 bucket `quiz-master-media`. Larger still photos are optimized in the browser; videos play through the Worker media route with byte-range support for seeking. Existing D1 media continues to load. If R2 is not bound, uploads up to 1.8 MB continue to use D1.
+- Photos and videos up to 1.8 MB are uploaded to D1. Large still photos are automatically reduced in the browser. For larger videos, paste a public media link; no R2 bucket is required.
 - Answers lock on submit and cannot be changed. Teams see their own correct/incorrect status after each completed round; other teams’ answers remain private.
 - Admin can download the answers CSV, which opens in Excel and includes answers, scores, and response times.
 - The audience page updates the score-sorted leaderboard live and animates rank rows. It shows projected questions only after all teams are ready.
@@ -78,7 +78,7 @@ The participant photo delivery route converts D1 image bytes into a valid browse
 
 # Large photo and host-start update
 
-Large still photos are resized and converted to JPEG in the admin browser before upload. Large GIFs are not flattened; use a smaller GIF or a public link. Videos remain unchanged and upload to R2 up to 50 MB once the `MEDIA` binding is configured. Participants keep the Ready check-in button, but no longer have an Enter/Start round button: after the admin starts and unlocks a round, the ready team’s questions open automatically. Teams included by the admin when starting a round can enter without another round password prompt. No D1 schema or database ID changes were made.
+Large still photos are resized and converted to JPEG in the admin browser before upload, fitting the 1.8 MB D1 upload limit. Large GIFs are not flattened; use a smaller GIF or a public link. Videos over 1.8 MB should use a public URL. Participants keep the Ready check-in button, but no longer have an Enter/Start round button: after the admin starts and unlocks a round, the ready team’s questions open automatically. Teams included by the admin when starting a round can enter without another round password prompt. No D1 schema or database ID changes were made.
 
 # Question flow, exports and live updates
 
@@ -86,15 +86,4 @@ Each round can use either the existing all-at-once mode or a sequential mode. In
 
 ## Platform limits
 
-A website cannot prevent someone from switching phone apps or browser tabs. The round focus toggle can request fullscreen, detect tab/fullscreen exits, and report alerts to the host, but it cannot enforce a device lock. Large still photos are reduced in the browser. Video and media uploads support files up to 50 MB when the `MEDIA` R2 binding is configured; without that binding, only the D1 fallback limit of 1.8 MB is available. The website can brand its link preview as Quiz Club, but the sender name in Gmail or another sharing app comes from that account and cannot be changed by this site.
-
-# Larger media uploads with R2
-
-Create the R2 bucket before deploying this version:
-
-1. In the Cloudflare dashboard, open **R2 Object Storage** and choose **Create bucket**.
-2. Name the bucket exactly `quiz-master-media` and create it. Keep it private; participants receive media through the Worker route.
-3. Commit the updated `wrangler.jsonc`, `worker.mjs`, and `public/app.js` to the connected GitHub repository. Keep the deploy command as `npx wrangler deploy --config ./wrangler.jsonc`.
-4. Wait for the deployment to succeed. New photo/video uploads up to 50 MB will then go to R2. Existing media stored in D1 remains readable.
-
-The Worker binding is named `MEDIA`. The bucket name in Cloudflare must match `quiz-master-media`; otherwise Wrangler cannot deploy the binding. R2 uploads do not need a public bucket URL or a D1 schema change. The 50 MB application limit is intentional for reliable browser uploads; it is below the typical Workers request-body ceiling.
+A website cannot prevent someone from switching phone apps or browser tabs. The round focus toggle can request fullscreen, detect tab/fullscreen exits, and report alerts to the host, but it cannot enforce a device lock. Large still photos are reduced in the browser. Uploads are limited to 1.8 MB in D1; use a public video link for larger clips. The website can brand its link preview as Quiz Club, but the sender name in Gmail or another sharing app comes from that account and cannot be changed by this site.
