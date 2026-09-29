@@ -8,6 +8,12 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*", "/media/*"]
   },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "quiz-master-media"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

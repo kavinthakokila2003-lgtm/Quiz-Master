@@ -11,6 +11,13 @@ const initial = () => ({
 const json = (data, status=200, headers={}) => new Response(JSON.stringify(data), {status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers}});
 const fail = (status,error) => json({error},status);
 const csvCell = value => `"${String(value??'').replaceAll('"','""').replace(/[\r\n]/g,' ')}"`;
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
+function requestedByteRange(request,size){
+  const header=request.headers.get('range');if(!header)return null;
+  const match=/^bytes=(\d*)-(\d*)$/.exec(header.trim());if(!match)return {invalid:true};
+  let start,end;if(match[1]===''){const suffix=Number(match[2]);if(!suffix)return {invalid:true};start=Math.max(0,size-suffix);end=size-1}else{start=Number(match[1]);end=match[2]?Number(match[2]):size-1}
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<start||start>=size)return {invalid:true};end=Math.min(end,size-1);return {start,end,length:end-start+1};
+}
 async function getState(env){
   await env.DB.prepare('INSERT OR IGNORE INTO app_state (id, body, version) VALUES (1, ?, 1)').bind(JSON.stringify(initial())).run();
   const row=await env.DB.prepare('SELECT body, version FROM app_state WHERE id=1').first();
@@ -54,8 +61,11 @@ async function handleApi(req,env,url){
  if(m==='GET'&&p==='/api/public/state'){await syncExpired(env);return json(safeState((await getState(env)).state));}
  if(m==='POST'&&p==='/api/admin/media'){
    if(!await token(req,env,'admin'))return fail(401,'Admin login required');
-   const form=await req.formData(),file=form.get('file'),allowed=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];if(!file||typeof file.arrayBuffer!=='function')return fail(400,'Choose an image or video first');if(!allowed.includes(file.type))return fail(415,'Use JPG, PNG, WEBP, GIF, MP4 or WEBM');if(file.size>1800000)return fail(413,'For free Cloudflare storage, uploads must be 1.8 MB or smaller. Add a video link for larger clips.');
-   await env.DB.prepare('CREATE TABLE IF NOT EXISTS question_media (id TEXT PRIMARY KEY, mime_type TEXT NOT NULL, data BLOB NOT NULL, created_at TEXT NOT NULL)').run();const id=crypto.randomUUID(),data=new Uint8Array(await file.arrayBuffer());await env.DB.prepare('INSERT INTO question_media (id,mime_type,data,created_at) VALUES(?,?,?,?)').bind(id,file.type,data,new Date().toISOString()).run();return json({url:`/media/${id}`,type:file.type,name:file.name});
+   const form=await req.formData(),file=form.get('file'),allowed=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];if(!file||typeof file.arrayBuffer!=='function')return fail(400,'Choose an image or video first');if(!allowed.includes(file.type))return fail(415,'Use JPG, PNG, WEBP, GIF, MP4 or WEBM');if(file.size>MAX_MEDIA_BYTES)return fail(413,'Media uploads must be 50 MB or smaller.');
+   const id=crypto.randomUUID();
+   if(env.MEDIA){await env.MEDIA.put(`question-media/${id}`,file.stream(),{httpMetadata:{contentType:file.type,cacheControl:'public, max-age=31536000'},customMetadata:{originalName:String(file.name||'media').slice(0,180)}});return json({url:`/media/${id}`,type:file.type,name:file.name,storage:'r2'});}
+   if(file.size>1800000)return fail(503,'Large video uploads need the MEDIA R2 bucket binding. Create the bucket and deploy the updated Wrangler config, then try again.');
+   await env.DB.prepare('CREATE TABLE IF NOT EXISTS question_media (id TEXT PRIMARY KEY, mime_type TEXT NOT NULL, data BLOB NOT NULL, created_at TEXT NOT NULL)').run();const data=new Uint8Array(await file.arrayBuffer());await env.DB.prepare('INSERT INTO question_media (id,mime_type,data,created_at) VALUES(?,?,?,?)').bind(id,file.type,data,new Date().toISOString()).run();return json({url:`/media/${id}`,type:file.type,name:file.name,storage:'d1'});
  }
  if(m==='POST'&&p==='/api/team/ready'){
    const ses=await token(req,env,'team');if(!ses)return fail(401,'Team login required');const b=await body(req),n=Number(b?.round);
@@ -99,7 +109,16 @@ async function handleApi(req,env,url){
  return fail(404,'Not found');
 }
 
+async function mediaResponse(request,env,id){
+  const method=request.method;if(method!=='GET'&&method!=='HEAD')return new Response('Not found',{status:404});
+  if(env.MEDIA){
+    const key=`question-media/${id}`,meta=await env.MEDIA.head(key);
+    if(meta){const range=requestedByteRange(request,meta.size);if(range?.invalid)return new Response(null,{status:416,headers:{'content-range':`bytes */${meta.size}`,'accept-ranges':'bytes'}});const object=method==='HEAD'?meta:await env.MEDIA.get(key,range?{range:{offset:range.start,length:range.length}}:undefined);if(!object)return new Response('Not found',{status:404});const headers=new Headers();object.writeHttpMetadata(headers);headers.set('etag',object.httpEtag);headers.set('accept-ranges','bytes');headers.set('x-content-type-options','nosniff');headers.set('cache-control','public, max-age=31536000');headers.set('content-length',String(range?range.length:meta.size));if(range)headers.set('content-range',`bytes ${range.start}-${range.end}/${meta.size}`);return new Response(method==='HEAD'?null:object.body,{status:range?206:200,headers});}
+  }
+  const row=await env.DB.prepare('SELECT mime_type,data FROM question_media WHERE id=?').bind(id).first();if(!row)return new Response('Not found',{status:404});const bytes=Array.isArray(row.data)?Uint8Array.from(row.data):row.data instanceof ArrayBuffer?new Uint8Array(row.data):ArrayBuffer.isView(row.data)?new Uint8Array(row.data.buffer,row.data.byteOffset,row.data.byteLength):null;if(!bytes)return new Response('Stored media is invalid',{status:500});const range=requestedByteRange(request,bytes.byteLength);if(range?.invalid)return new Response(null,{status:416,headers:{'content-range':`bytes */${bytes.byteLength}`,'accept-ranges':'bytes'}});const body=range?bytes.slice(range.start,range.end+1):bytes,headers=new Headers({'content-type':row.mime_type,'cache-control':'public, max-age=31536000','x-content-type-options':'nosniff','accept-ranges':'bytes','content-length':String(body.byteLength)});if(range)headers.set('content-range',`bytes ${range.start}-${range.end}/${bytes.byteLength}`);return new Response(method==='HEAD'?null:body,{status:range?206:200,headers});
+}
+
 export default { async fetch(request,env){
- try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);if(url.pathname.startsWith('/media/')){if(request.method!=='GET')return new Response('Not found',{status:404});const id=url.pathname.slice('/media/'.length);if(!/^[0-9a-f-]{36}$/i.test(id))return new Response('Not found',{status:404});const row=await env.DB.prepare('SELECT mime_type,data FROM question_media WHERE id=?').bind(id).first();if(!row)return new Response('Not found',{status:404});const bytes=Array.isArray(row.data)?Uint8Array.from(row.data):row.data instanceof ArrayBuffer?new Uint8Array(row.data):ArrayBuffer.isView(row.data)?new Uint8Array(row.data.buffer,row.data.byteOffset,row.data.byteLength):null;if(!bytes)return new Response('Stored media is invalid',{status:500});return new Response(bytes,{headers:{'content-type':row.mime_type,'cache-control':'public, max-age=31536000','x-content-type-options':'nosniff'}})}if(!['/','/index.html','/admin','/admin.html','/participant','/participant.html','/audience','/audience.html'].includes(url.pathname))return new Response('Not found',{status:404});return await env.ASSETS.fetch(request)}
+ try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await handleApi(request,env,url);if(url.pathname.startsWith('/media/')){const id=url.pathname.slice('/media/'.length);if(!/^[0-9a-f-]{36}$/i.test(id))return new Response('Not found',{status:404});return await mediaResponse(request,env,id)}if(!['/','/index.html','/admin','/admin.html','/participant','/participant.html','/audience','/audience.html'].includes(url.pathname))return new Response('Not found',{status:404});return await env.ASSETS.fetch(request)}
  catch(e){console.error(e);return fail(e.status||500,e.status?e.message:'Server error')}
 }};
