@@ -2,8 +2,10 @@
 (() => {
   const baseWaiting = window.participantWaiting;
   const baseEnterRound = window.enterRound;
+  const baseStartClock = window.startClock;
   const baseSubmitRound = window.submitRound;
   let submitting = false;
+  let questionTimer = null;
 
   const draftKey = (round) => `quizMasterDraft:${S.team?.code || 'team'}:${Number(round)}`;
   const answeredCount = () => (activeQuestionSet || []).filter((q) => String(draftAnswers[q.id] || '').trim()).length;
@@ -48,6 +50,16 @@
     const round = activeRound || {};
     const questions = activeQuestionSet || [];
     const locked = !!round.participantLocked;
+    if (round.sequential) {
+      const q = S.currentQuestion || questions[0];
+      if (!q) return `<main class="qp-shell"><section class="qp-empty card"><h1>Next question is loading</h1><p>Stay here; it will appear automatically.</p></section></main>`;
+      const result = S.currentQuestionAnswer;
+      const selected = draftAnswers[q.id] || '';
+      const control = q.options?.length
+        ? `<div class="qp-options" role="group" aria-label="Answer choices">${q.options.map((option,index)=>`<button type="button" class="qp-option ${selected===option?'is-selected':''}" data-qm-answer="1" data-question-id="${esc(q.id)}" data-answer-value="${esc(option)}" aria-pressed="${selected===option}" ${locked||result||submitting?'disabled':''}><span class="qp-option-key">${String.fromCharCode(65+index)}</span><span>${esc(option)}</span><span class="qp-option-check" aria-hidden="true">✓</span></button>`).join('')}</div>`
+        : `<label class="qp-answer-label" for="sequentialAnswer">Your answer</label><input class="qp-text-answer" id="sequentialAnswer" data-qm-typed="1" data-question-id="${esc(q.id)}" value="${esc(selected)}" placeholder="Type your answer" ${locked||result||submitting?'disabled':''}>`;
+      return `<header class="qp-header"><div class="qp-brand"><span>QM</span><div><b>${esc(S.portalName||S.quizName||'QUIZ MASTER')}</b><small>${esc(S.team?.name||'Team')} · ${esc(round.name||'Round')}</small></div></div><div class="qp-header-tools"><span class="qp-pill">QUESTION ${(Number(round.questionIndex)||0)+1} / ${Number(round.questions)||questions.length}</span><div class="qp-timer" id="roundTimer">--:-- <small>question time</small></div></div></header><main class="qp-shell"><section class="qp-question card"><div class="qp-question-top"><span class="qp-question-number">QUESTION ${String((Number(round.questionIndex)||0)+1).padStart(2,'0')}</span><span class="qp-points">${Number(q.points)||0} points</span></div>${mediaMarkup(q.mediaUrl,q.mediaType)}<h1>${esc(q.text)}</h1>${control}${result?`<aside class="qp-lock-banner" role="status"><span>${result.correct?'✓':'×'}</span><div><strong>Your answer is locked · ${result.correct?'Correct':'Not correct'}</strong><p>You will see the next question when its timer begins.</p></div></aside>`:`<button class="btn qp-submit-button" type="button" onclick="submitSequentialAnswer()" ${locked||submitting?'disabled':''}>${submitting?'Saving…':'Lock in answer'}</button>`}</section><p class="qp-footnote">Answers lock when submitted. The next question appears when its timer ends.</p></main>`;
+    }
     if (!questions.length) {
       return `<header class="qp-header"><a class="qp-brand" href="/participant"><span>QM</span><b>${esc(S.portalName || S.quizName || 'QUIZ MASTER')}</b></a><span class="qp-pill">TEAM QUIZ</span></header><main class="qp-shell"><section class="qp-empty card"><span class="qp-empty-icon">!</span><div class="eyebrow">${esc(round.name || 'ROUND')}</div><h1>Questions aren’t available yet</h1><p>The host has not added questions to this round. Your answers have not been changed. Stay on this page or return to your team lobby.</p><button class="btn" type="button" onclick="returnToTeamLobby()">Return to team lobby</button></section></main>`;
     }
@@ -75,12 +87,26 @@
   window.enterRound = async function (round) {
     await baseEnterRound(round);
     if (S.phase !== 'play' || !activeRound) return;
+    if (activeRound.sequential) { S.currentQuestion=activeQuestionSet[0]||null; S.currentQuestionAnswer=S.currentQuestionAnswer||null; }
     try {
       const saved = JSON.parse(sessionStorage.getItem(draftKey(activeRound.n)) || '{}');
       draftAnswers = Object.assign({}, saved, draftAnswers || {});
     } catch { draftAnswers = draftAnswers || {}; }
     render();
     if (lockedNow()) render();
+  };
+
+  window.submitSequentialAnswer = async function () {
+    const q=S.currentQuestion||activeQuestionSet?.[0];if(!q||S.currentQuestionAnswer||lockedNow()||submitting)return;
+    const answer=String(draftAnswers[q.id]||'').trim();if(!answer)return toast('Choose or type an answer first.');
+    submitting=true;render();try{const result=await api('/api/team/submit-question','POST',{round:Number(activeRound.n),questionId:q.id,answer,elapsedMs:Math.max(0,Number(activeRound.questionDeadlineAt)-Date.now())});S.currentQuestionAnswer=result;submitting=false;render()}catch(e){submitting=false;render();toast(e.message)}
+  };
+
+  window.startClock = function () {
+    clearInterval(questionTimer);
+    if(!activeRound?.sequential){baseStartClock();return;}
+    clearInterval(timeTimer);
+    questionTimer=setInterval(()=>{if(S.phase!=='play'||!activeRound?.questionDeadlineAt)return;const left=Math.max(0,Math.ceil((Number(activeRound.questionDeadlineAt)-Date.now())/1000)),el=document.getElementById('roundTimer');if(el)el.innerHTML=`${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')} <small>question time</small>`},200);
   };
 
   function lockedNow() { return !!activeRound?.participantLocked; }

@@ -79,3 +79,11 @@ The participant photo delivery route converts D1 image bytes into a valid browse
 # Large photo and host-start update
 
 Large still photos are resized and converted to JPEG in the admin browser before upload, targeting the existing 1.8 MB storage limit. Large GIFs are not flattened; use a smaller GIF or a public link. Videos remain unchanged and must fit the upload limit or use a public link. Participants keep the Ready check-in button, but no longer have an Enter/Start round button: after the admin starts and unlocks a round, the ready team’s questions open automatically. Teams included by the admin when starting a round can enter without another round password prompt. No D1 schema or database ID changes were made.
+
+# Question flow, exports and live updates
+
+Each round can use either the existing all-at-once mode or a sequential mode. In sequential mode, configure seconds per question, lock an answer for immediate private correct/incorrect feedback, and wait for the shared question timer to reveal the next question. The projector follows the same current question and does not reveal answers during a live round. Answer exports accept inclusive start and end dates. Admin, participant, and projector views poll more frequently so saved changes appear without a manual refresh. The Teams tab now focuses on adding and managing teams instead of CSV import/export actions. Shared link previews identify the site as Quiz Club.
+
+## Platform limits
+
+A website cannot prevent someone from switching phone apps or browser tabs. The round focus toggle can request fullscreen, detect tab/fullscreen exits, and report alerts to the host, but it cannot enforce a device lock. Large still photos are reduced in the browser. Videos still use the current D1 upload limit (1.8 MB); larger video uploads require an R2 object-storage bucket and binding, which are not configured in this package. The website can brand its link preview as Quiz Club, but the sender name in Gmail or another sharing app comes from that account and cannot be changed by this site.
