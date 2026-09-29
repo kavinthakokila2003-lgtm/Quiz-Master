@@ -71,3 +71,7 @@ Participant question photos now use a clear, centered image frame; uploaded and 
 # Media delivery and round readiness update
 
 D1 returns BLOB columns as byte arrays; the `/media/` route now converts those bytes to a browser-readable response, which fixes uploaded question images failing on participant devices. New uploads are checked by reopening the saved media before the question can be saved. The selected-round panel now lists every team’s access, earlier-round, and ready status. It clearly shows that screens are locked before a round starts and remain locked after starting until the admin unlocks them. A layered vector owl now has subtle breathing, wing, head, and blink motion. No D1 schema or database ID changes were made.
+
+# Participant photo and readiness flow fix
+
+The participant photo delivery route converts D1 image bytes into a valid browser response. The round workflow is: the admin selects a round and grants access to specific teams (or all teams); each selected team uses the Ready button in its waiting area; the admin sees each team’s access, earlier-round eligibility, and ready status; Start becomes available after every selected eligible team is ready. Starting a round keeps participant screens locked until the admin unlocks them. Teams may mark ready before a round starts even when the tournament-wide pause toggle is on. No D1 schema or database ID changes were made.
